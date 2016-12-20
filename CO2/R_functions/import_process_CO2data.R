@@ -179,6 +179,9 @@ setStartEnd <- function(x){
 
 }
 
+setStartEndTimes <- function(xx){
+  lapply(xx, setStartEnd)
+}
 
 
 # function to check if start and stoptime of CO2 is within timeframe specified in metadata
