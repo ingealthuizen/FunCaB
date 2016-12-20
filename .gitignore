@@ -1,0 +1,24 @@
+#
+.Rproj.user
+
+# history files
+.Rhistory
+
+# not committing data files to git
+*.RData
+*.\#00
+*.txt
+*.csv
+*.pdf
+*.jpeg
+*.ods
+*.xlsx
+*.xls
+*.png
+*.m
+*.rar
+*.DS_Store
+
+#
+.Ruserdata
+
