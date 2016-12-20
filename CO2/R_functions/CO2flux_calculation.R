@@ -1,0 +1,46 @@
+#flux calculation for all measurements within specified datafile
+fluxcalc<-function(input){
+  
+  # constants specification for chamber
+  
+  height= 0.4 #m
+  area= 0.25*0.25 #m^2
+  vol= area*height # m^3
+  R= 8.31442 # m^3 Pa/K/mol
+  
+  # flux
+  time<-input$CO2$datetime
+  time<-time-time[1]
+  time<-unclass(time)
+  co2<-input$CO2$value # umol/mol
+  h2O<-8 #mean(input$H2O$value) estimated value mmol/mol
+  PAR<-mean(input$PAR$value)
+  press<- input$meta$airpress # kPA estimated value based on altitude site
+  temp<- input$temp # C 
+  
+  #ambient
+  cprime<-co2/(1-(h2O/1010))
+  
+  # linear Regression
+  CO2.lm<- lm(cprime~time, subset= input$CO2$keep)
+  inter<- coef(CO2.lm)[1]
+  dcdt<- coef(CO2.lm)[2]
+  rsqd<- summary(CO2.lm)$r.sq
+  nee<- -((vol*press)*(1010-h2O)*dcdt/ (R*area*(temp+273.15))) # D(Reco)= negative L(NEE)=positive
+  
+  #	 Non-Linear, Exponential Regression (Leaky Fit Model) 
+  #  cnot = cprime[3]#almost certainly wrong
+  #  warning("cnot probably wrong")
+  # uptake.fm <- nls(cprime ~ (cnot - A)*exp(-time/B) + A, start=list(A=375, B=40), subset=time>use[1] & time<use[2]) #(A=375, B=40)
+  #  Css = summary(uptake.fm)$param[1]
+  #  tau = summary(uptake.fm)$param[2]
+  
+  
+  # nee_exp <- ((camb-Css)/(area*tau))*(vol*pav*(1000-wav)/(R*(tav + 273.15))) #equation 3 in Saleska 1999
+  # temp4 <- (cnot-Css)*exp(-time/tau) + Css #equation 4 in Saleska 1999
+  # lines(time,temp4, col=4)
+  #	   nee_exp
+  
+  cbind(input$meta, PAR=PAR, temp=temp, nee=nee, rsqd=rsqd)
+}
+# make table of metadata and flux

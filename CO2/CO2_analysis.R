@@ -1,29 +1,18 @@
-setwd("O:\\FunCab\\Data\\Rscript")
-source("O:\\FunCab\\Data\\Rscript\\R functions2.R") #give exact location of R functions.R file
+#source functions for import/proces and calculation of CO2 flux
+source("CO2/R_functions/import_process_CO2data.R") 
+source("CO2/R_functions/CO2flux_calculation.R")
+source("CO2/R_functions/CO2_plot.R")
+#give exact location of R functions.R file
 #source("HighstatLibV10.R")
 
-require(readxl) #require packages
-require(ggplot2)
-require(graphics)
-require(stats)
-library(plyr)
+library(readxl) #require packages
+library(ggplot2)
 library(lattice)
-require(dplyr)
+library(dplyr)
+
+# get specific functions from plyr by using plyr::ldply
 
 #import all datafiles
-read.sitefiles<-function(file){
-  require(readxl) #install package
-  sites<-read_excel(file, sheet=1, col_names=TRUE, col_type= NULL) #read excel file
-  sites$dates<- as.Date(sites$dates, format="%d.%m.%y") 
-  sites<-sites[!is.na(sites$site), ] # remove rows with no data
-  #import data from files of site.files
-  sites.data<-lapply(1:nrow(sites), function(i){
-    r<-sites[i, ]
- #   print(r)
-    import.everything(metaFile = r$meta, loggerFile = r$logger, tempFile = r$temp)
-  }) #process data from all files
-  unlist(sites.data, recursive = FALSE) # make on big list of data from all sites, without sublists
-}
 
 sites.data<-read.sitefiles("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\CO2 flux\\RcodeCO2\\sitefiles pre2015.xlsx")
 
@@ -93,8 +82,8 @@ xyplot(GPP ~ PAR.x  | factor(site), data = MergeLD,
 q<- ggplot(MergeLD, aes(tempK, Reco, col=factor(templevel.x)))+
   geom_point(shape= 16, size= 3.5)+
   geom_smooth(method = "glm", se = FALSE)+
-  labs(x= "Temperature (K)", y = "Reco (µmol/m^2/s)", col="Temperature")+
-  scale_colour_manual(labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#FF6633"))+
+  labs(x= "Temperature (K)", y = "Reco (?mol/m^2/s)", col="Temperature")+
+  scale_colour_manual(labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#FF6633"))+
   theme(axis.title.y = element_text(size = rel(2), angle = 90))+
   theme(axis.title.x = element_text(size = rel(2)))+
   theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
@@ -106,8 +95,8 @@ q
 
 q<- ggplot(MergeLD, aes(PAR.x, GPP, col=factor(templevel.x)))+
     geom_point(shape= 16, size= 3.5)+
-    labs(x= "PAR (µmol/m^2/s)", y = "GPP (µmol/m^2/s)", col="Temperature")+
-    scale_colour_manual(labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#FF6633"))+
+    labs(x= "PAR (?mol/m^2/s)", y = "GPP (?mol/m^2/s)", col="Temperature")+
+    scale_colour_manual(labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#FF6633"))+
     theme(axis.title.y = element_text(size = rel(2), angle = 90))+
     theme(axis.title.x = element_text(size = rel(2)))+
     theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
@@ -209,9 +198,9 @@ p<- ggplot(SubsetD, aes(preclevel, Reco15, colour = factor(templevel)))
   
 p<- ggplot(MergeLD, aes(factor(preclevel.x), Reco15, fill= factor(templevel.x)))+
   geom_boxplot()+
-  scale_fill_manual(name="Temperature",labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#E69F00"))+
+  scale_fill_manual(name="Temperature",labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#E69F00"))+
   scale_x_discrete(labels=c("600", "1200", "2000", "2700"))+
-  labs(list(x="precipation (mm/y)", y="Reco at 15°C"))+
+  labs(list(x="precipation (mm/y)", y="Reco at 15?C"))+
   theme(axis.title.y = element_text(size = rel(2.5), angle = 90))+
   theme(axis.title.x = element_text(size = rel(2.5)))+
   theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
@@ -228,7 +217,7 @@ p<- ggplot(MergeLD, aes(factor(templevel.x), Reco15))
 # ====GPP===========================================================================================================  
   
 # fit exponential curve to GPP~temp
-# rectangular hyperbola Thornley and Johnson (1990)  GPP = (aGPP×GPPmax ×PAR)/( aGPP×PAR + GPPmax)
+# rectangular hyperbola Thornley and Johnson (1990)  GPP = (aGPP?GPPmax ?PAR)/( aGPP?PAR + GPPmax)
 #aGPP is the initial slope of the rectangular hyperbola, also called the 'apparent quantum yield of GPP', and GPPmax is the asymptotic approach to a maximum GPP at high light intensity. 
 
 p<- ggplot(MergeLD, aes(PAR.x, GPP, col=factor(templevel.x)))
@@ -250,8 +239,8 @@ recalcGPP<-MergeLD$GPP/fitted(fit.GPP)*(((coef(fit.GPP)[1])*(coef(fit.GPP)[2])*1
 
 q<- ggplot(MergeLD, aes(tempK, GPPnew, col=factor(templevel.x)))+
     geom_point(shape= 16, size= 3.5)+
-    labs(x= "Temperature (K)", y = "GPP (µmol/m^2/s)", col="Temperature")+
-    scale_colour_manual(labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#E69F00"))+
+    labs(x= "Temperature (K)", y = "GPP (?mol/m^2/s)", col="Temperature")+
+    scale_colour_manual(labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#E69F00"))+
     theme(axis.title.y = element_text(size = rel(2), angle = 90))+
     theme(axis.title.x = element_text(size = rel(2)))+
     theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
@@ -262,9 +251,9 @@ q<- ggplot(MergeLD, aes(tempK, GPPnew, col=factor(templevel.x)))+
   
 q<- ggplot(MergeLD, aes(factor(preclevel.x), GPPnew, fill= factor(templevel.x)))+ 
     geom_boxplot()+
-    scale_fill_manual(name="Temperature",labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#E69F00"))+
+    scale_fill_manual(name="Temperature",labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#E69F00"))+
     scale_x_discrete(labels=c("600", "1200", "2000", "2700"))+
-    labs(list(x="precipation (mm/y)", y="GPP at PAR 1500 (µmol/m^2/s)"))+
+    labs(list(x="precipation (mm/y)", y="GPP at PAR 1500 (?mol/m^2/s)"))+
     theme(axis.title.y = element_text(size = rel(2), angle = 90))+
     theme(axis.title.x = element_text(size = rel(2.5)))+
     theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
@@ -294,9 +283,9 @@ plot(GPP.split$GPPTlevel~GPP.split$temp.x)
 
 q<- ggplot(GPP.split, aes(factor(preclevel.x), GPPTlevel, fill= factor(templevel.x)))+ 
   geom_boxplot()+
-  scale_fill_manual(name="Temperature",labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#E69F00"))+
+  scale_fill_manual(name="Temperature",labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#E69F00"))+
   scale_x_discrete(labels=c("600", "1200", "2000", "2700"))+
-  labs(list(x="precipation (mm/y)", y="GPP at PAR 1500 (µmol/m^2/s)"))+
+  labs(list(x="precipation (mm/y)", y="GPP at PAR 1500 (?mol/m^2/s)"))+
   theme(axis.title.y = element_text(size = rel(2), angle = 90))+
   theme(axis.title.x = element_text(size = rel(2.5)))+
   theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
@@ -308,8 +297,8 @@ q
 
 q<- ggplot(GPP.split, aes(tempK, GPPTlevel, col=factor(templevel.x)))+
   geom_point(shape= 16, size= 3.5)+
-  labs(x= "Temperature (K)", y = "GPP (µmol/m^2/s)", col="Temperature")+
-  scale_colour_manual(labels=c("7.5°C","9.5°C","11.5°C"), values=c("#56B4E9","#009E73","#E69F00"))+
+  labs(x= "Temperature (K)", y = "GPP (?mol/m^2/s)", col="Temperature")+
+  scale_colour_manual(labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#E69F00"))+
   theme(axis.title.y = element_text(size = rel(2), angle = 90))+
   theme(axis.title.x = element_text(size = rel(2)))+
   theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
