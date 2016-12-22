@@ -1,3 +1,4 @@
+library(dplyr)
 # import temperature data from Ibutton 
 read.ibutton<-function(file){                             
   ibut<-read.csv(file, header=FALSE)
@@ -141,9 +142,9 @@ process.data <- function(meta, logger, temp){
   cleaner[!vapply(cleaner, is.null, FUN.VALUE = TRUE)]    
 }  
 
+# function to reset start and stoptime for CO2 measurement
 setStartEnd <- function(x){
-    # unhach from here to try China code part
-      startHappy <- FALSE
+      startHappy <- FALSE 
       endHappy <- FALSE
       while(!(startHappy & endHappy)){
         layout(matrix(c(1,1,1,2,2,2,2,2,2), nrow = 3, ncol = 3, byrow = TRUE))
@@ -152,7 +153,7 @@ setStartEnd <- function(x){
         plot.CO2(x)
       
         
-        #fit in China code for readjusting timeframe used for fitting line 
+        
         tstart <- readline("Enter preferred start time for fitting. \n Round to nearest integer second. press 'return':")
         if(!grepl("^[0-9]+$", tstart)){
           tstart <- 0
@@ -164,7 +165,7 @@ setStartEnd <- function(x){
         
         
         
-        tfinish <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. \n  If default of 120s is preferred, press 'return':")
+        tfinish <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preffered, press 'return':")
         if(!grepl("^[0-9]+$", tfinish)){
           tfinish <- Inf
           endHappy <- TRUE
@@ -179,8 +180,9 @@ setStartEnd <- function(x){
 
 }
 
-setStartEndTimes <- function(xx){
-  lapply(xx, setStartEnd)
+#loop for setting new start and end times for all measurements in file
+setStartEndTimes <- function(newtimes){
+  lapply(newtimes, setStartEnd)
 }
 
 
