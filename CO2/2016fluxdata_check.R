@@ -1,5 +1,7 @@
 #test datafiles 2016
-source("O:\\FunCab\\Data\\FunCaB Rscript\\R functions2new.R") #give exact location of R functions.R file
+source("CO2/R_functions/import_process_CO2data.R") 
+source("CO2/R_functions/CO2flux_calculation.R")
+source("CO2/R_functions/CO2_plot.R")#give exact location of R functions.R file
 
 #site per site test of datafiles
 
@@ -241,7 +243,7 @@ ALR210616_1<-import.everything(
  temp= "O:\\FunCab\\Data\\co2flux2016\\Temperature files\\20160621_ALR_CH1_TEMP.txt"
 )
 
-#ALR 21-06-2016_2_1 # error
+#ALR 21-06-2016_2_1 
 ALR210616_2_1<-import.everything(
   meta= "O:\\FunCab\\Data\\co2flux2016\\metadata files\\21062016_ALR_ch2_1.txt",
   logger= "O:\\FunCab\\Data\\co2flux2016\\Flux2016 Li1400\\20160621_ALR_LI1400_CH2_1.txt",
