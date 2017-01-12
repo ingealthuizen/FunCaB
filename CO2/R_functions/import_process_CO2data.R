@@ -142,7 +142,7 @@ process.data <- function(meta, logger, temp){
   cleaner[!vapply(cleaner, is.null, FUN.VALUE = TRUE)]    
 }  
 
-# function to reset start and stoptime for CO2 measurement
+# function to reset start and stoptime for CO2 measurement, default is startHappy and endHappy is FALSE
 setStartEnd <- function(x){
       startHappy <- FALSE 
       endHappy <- FALSE
