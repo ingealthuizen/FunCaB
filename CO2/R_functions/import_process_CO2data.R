@@ -223,7 +223,7 @@ read.sitefiles<-function(file){
   sites.data<-lapply(1:nrow(sites), function(i){
     r<-sites[i, ]
     #   print(r)
-    import.everything(metaFile = r$meta, loggerFile = r$logger, tempFile = r$temp)
+    import.everything(metaFile = r$meta.data, loggerFile = r$logger.data, tempFile = r$temp.data)
   }) #process data from all files
   unlist(sites.data, recursive = FALSE) # make on big list of data from all sites, without sublists
 }
