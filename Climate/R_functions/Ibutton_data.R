@@ -10,8 +10,11 @@ read.ibutton<-function(file){
   ibut
 }
 
-ibut.data<-read.ibutton("P:\\Felles\\Funcab_Seedclim\\i-button loggers\\Lavisdalen\\3E3ABB41.csv")
-plot(ibut.data)
+ibut.data<-read.ibutton("O:\\FunCab\\Data\\FunCaB\\Climate\\Data\\ibutton loggers\\Ibutton_Controls\\FAU_2C.csv")
+ggplot(ibut.data, aes(datetime,temp))+
+  geom_line()
+
+#make loop to load ibutton data of controls per site and plot it in same graph with different colors
 
 ibut.data$day<-as.numeric(format(ibut.data$datetime, format="%d")) 
 ibut.data$month<-as.numeric(format(ibut.data$datetime, format="%m")) 
