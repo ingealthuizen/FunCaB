@@ -142,6 +142,12 @@ process.data <- function(meta, logger, temp){
   cleaner[!vapply(cleaner, is.null, FUN.VALUE = TRUE)]    
 }  
 
+#specifying data used in function process.data
+#plotme == TRUE will create plots for every measurement specified in proces.data by start and stoptime in meta.data
+combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
+combine.data
+
+
 # function to reset start and stoptime for CO2 measurement, default is startHappy and endHappy is FALSE
 setStartEnd <- function(x){
       startHappy <- FALSE 
@@ -186,6 +192,7 @@ setStartEndTimes <- function(newtimes){
 }
 
 
+
 # function to check if start and stoptime of CO2 is within timeframe specified in metadata
 check<-function(x){
   CO2<-sapply(x, function(r){
@@ -199,11 +206,12 @@ check<-function(x){
 
 # importing combination of datafiles of specific day site time
 import.everything<-function(metaFile, loggerFile, tempFile){
-  meta<-read.metadata(metaFile)
-  logger<-read.logger(loggerFile)
-  temp<- read.ibutton(tempFile)
+  meta.data<-read.metadata(metaFile)
+  logger.data<-read.logger(loggerFile)
+  temp.data<- read.ibutton(tempFile)
   process.data(meta=meta, logger=logger, temp=temp)
 }
+
 
 
 #importing all site file combination from a sitefile
