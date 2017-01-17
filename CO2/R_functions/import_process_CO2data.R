@@ -147,7 +147,7 @@ setStartEnd <- function(x){
       startHappy <- FALSE 
       endHappy <- FALSE
       while(!(startHappy & endHappy)){
-        layout(matrix(c(1,1,1,2,2,2,2,2,2), nrow = 3, ncol = 3, byrow = TRUE))
+        layout(matrix(c(1,1,1,2,2,2,2,2,2), nrow = 3, ncol = 3, byrow = TRUE)) #plot PAR and CO2 in for measurement
         par(mar=c(4,5,2,2))
         plot.PAR(x)
         plot.CO2(x)
@@ -156,7 +156,7 @@ setStartEnd <- function(x){
         
         tstart <- readline("Enter preferred start time for fitting. \n Round to nearest integer second. press 'return':")
         if(!grepl("^[0-9]+$", tstart)){
-          tstart <- 0
+          tstart <- 0 #default is 0, otherwise give other starttime
           startHappy <- TRUE
         } else {
           tstart <- as.integer(tstart)
@@ -204,6 +204,7 @@ import.everything<-function(metaFile, loggerFile, tempFile){
   temp<- read.ibutton(tempFile)
   process.data(meta=meta, logger=logger, temp=temp)
 }
+
 
 #importing all site file combination from a sitefile
 read.sitefiles<-function(file){
