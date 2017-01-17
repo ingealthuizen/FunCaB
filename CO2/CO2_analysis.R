@@ -20,10 +20,9 @@ combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
 setStartEndTimes(combine.data)
 
 
-
 #import all datafiles from 2015
 
-sites.data<-read.sitefiles("CO2/Data/sitefiles_pre2015.xlsx")
+sites.data.2015<-read.sitefiles("CO2/Data/data_files_2015_pre.xlsx")
 
 fluxcalc(sites.data[[1]]) #calculate flux 1 plot
 overviewsitesdata<-do.call(rbind, lapply(sites.data,fluxcalc)) #calculate flux all plots in all sites.
@@ -34,6 +33,9 @@ overviewsitesdata<-do.call(rbind, lapply(sites.data,fluxcalc)) #calculate flux a
 #geom_smooth(aes(fill=factor(site)), method=lm)+
 #scale_colour_hue(l=50)
 #allNEEtemp  
+
+#import and process datafiles 2016 !Note that these are only Li1400 data, not SQ files, those need to be ran seperately!
+sites.data.2016<-read.sitefiles("CO2/Data/data_files_2016new.xlsx")
 
 #add columns with precipitation and temperature level
 tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
