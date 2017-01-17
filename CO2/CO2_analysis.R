@@ -11,10 +11,19 @@ library(lattice)
 library(dplyr)
 
 # get specific functions from plyr by using plyr::ldply
+#==============================================================================================================================
+# importing single datafiles, process and set new start and end times. 
+temp.data<-read.ibutton("CO2/Data/Temperature_files_2016/20160622_FAU_CH1_TEMP.txt")
+log.data<-read.logger("CO2/Data/Fluxdata2016_Li1400/20160622_FAU_LI1400_CH1_1.txt")
+meta.data<-read.metadata("CO2/Data/metadata_2016/22062016_FAU_ch1_1.txt")
+combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
+setStartEndTimes(combine.data)
 
-#import all datafiles
 
-sites.data<-read.sitefiles("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\CO2 flux\\RcodeCO2\\sitefiles pre2015.xlsx")
+
+#import all datafiles from 2015
+
+sites.data<-read.sitefiles("CO2/Data/sitefiles_pre2015.xlsx")
 
 fluxcalc(sites.data[[1]]) #calculate flux 1 plot
 overviewsitesdata<-do.call(rbind, lapply(sites.data,fluxcalc)) #calculate flux all plots in all sites.
