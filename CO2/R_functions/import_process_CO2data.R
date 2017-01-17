@@ -209,7 +209,7 @@ import.everything<-function(metaFile, loggerFile, tempFile){
   meta.data<-read.metadata(metaFile)
   logger.data<-read.logger(loggerFile)
   temp.data<- read.ibutton(tempFile)
-  process.data(meta=meta, logger=logger, temp=temp)
+  process.data(meta=meta.data, logger=log.data, temp=temp.data)
 }
 
 
