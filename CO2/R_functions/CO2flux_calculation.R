@@ -9,20 +9,20 @@ fluxcalc<-function(input){
   R= 8.31442 # m^3 Pa/K/mol
   
   # flux
-  time<-input$CO2$datetime
+  time<-input$dat$datetime
   time<-time-time[1]
   time<-unclass(time)
-  co2<-input$CO2$value # umol/mol
+  co2<-input$dat$CO2 # umol/mol
   h2O<-8 #mean(input$H2O$value) estimated value mmol/mol
-  PAR<-mean(input$PAR$value)
+  PAR<-mean(input$dat$PAR, na.rm = TRUE)
   press<- input$meta$airpress # kPA estimated value based on altitude site
-  temp<- input$temp # C 
+  temp<- input$dat$temp[1] # C 
   
   #ambient
   cprime<-co2/(1-(h2O/1010))
   
   # linear Regression
-  CO2.lm<- lm(cprime~time, subset= input$CO2$keep)
+  CO2.lm<- lm(cprime~time, subset= input$dat$keep)
   inter<- coef(CO2.lm)[1]
   dcdt<- coef(CO2.lm)[2]
   rsqd<- summary(CO2.lm)$r.sq
