@@ -20,11 +20,16 @@ combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
 setStartEndTimes(combine.data)
 
 
-#import all datafiles from 2015
+data2016 <- list()
 
+data2016[[1]] <- process(xlfile, 1)
+
+
+#import all datafiles from 2015
 sites.data.2015<-read.sitefiles("CO2/Data/data_files_2015_pre.xlsx")
 
-fluxcalc(sites.data.2015[[1]]) #calculate flux 1 plot
+# Run fluxcalculation on all datafiles of 2015 
+#fluxcalc(sites.data.2015[[1]]) #calculate flux 1 plot
 overviewsitesdata<-do.call(rbind, lapply(sites.data.2015, fluxcalc)) #calculate flux all plots in all sites.
 
 #explore datapoints graphs
