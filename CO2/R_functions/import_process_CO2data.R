@@ -182,7 +182,7 @@ setStartEnd <- function(x){
         
         
         
-        tfinish <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preffered, press 'return':")
+        tfinish <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preferred, press 'return':")
         if(!grepl("^[0-9]+$", tfinish)){
           tfinish <- Inf
           endHappy <- TRUE
@@ -191,6 +191,8 @@ setStartEnd <- function(x){
           endHappy <- FALSE
         }
         x$dat$keep[x$dat$time < tstart | x$dat$time > tfinish] <- FALSE
+        x$meta$tstart <- tstart
+        x$meta$tfinish <- tfinish
       }   
      
   x
