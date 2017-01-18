@@ -1,4 +1,6 @@
 library(dplyr)
+library(lubridate)
+
 # import temperature data from Ibutton 
 read.ibutton<-function(file){                             
   ibut<-read.csv(file, header=FALSE)
@@ -6,7 +8,7 @@ read.ibutton<-function(file){
   ibut$temp<-ibut$temp+ibut$temp2/1000 # summing two temperature columns
   ibut$temp2<-NULL # setting temp2 column to null after it has been added to ibut$temp
   ibut$C<-NULL # setting C column to null 
-  ibut$datetime<- as.POSIXct(ibut$datetime, tz="", format="%d.%m.%y %H:%M:%S") #right format for reading datetime
+  ibut$datetime<- dmy_hms(ibut$datetime, tz = "Europe/Oslo") #right format for reading datetime
   
   ibut
 }
@@ -111,7 +113,11 @@ process.data <- function(meta, logger, temp){
     stoppar<-which(logger$PAR$datetime==metdat$stoptime)#or most recent
     if(length(stoppar)==0){
       dif<-logger$PAR$datetime-metdat$stoptime
-      stoppar<- which.max(!dif<0)-1
+      if(all(dif < 0)){
+        stoppar <- length(dif)
+      }else{
+        stoppar<- which.max(!dif<0)-1#-2
+      }
       warning("taking most recent PAR value")
     }
     
@@ -130,12 +136,17 @@ process.data <- function(meta, logger, temp){
       warning("taking most recent H2O value")
     }
     
-    h2o<-logger$H2O[starth2o:stoph2o,]
-    h2o <- rename(h2o, H2O = value)
+    if(length(starth2o) > 0 | length(stoph2o) > 0){
+      h2o<-logger$H2O[starth2o:stoph2o,]
+      h2o <- rename(h2o, H2O = value)
+    } else {
+        h2o <- data.frame(H20 = NA)
+    }
     
     temp2<-meantemp(temp, metdat$starttime, metdat$stoptime)
     
-    dat <- cbind(co2, PAR = par$PAR, H2O = mean(h2o$H2O), temp = temp2)
+    dat <- left_join(x = co2, y = select(par, datetime, PAR), by = c("datetime" = "datetime")) %>%
+      mutate(H2O = mean(h2o$H2O), temp = temp2)
     
     list(dat = dat, meta=metdat)
   })
@@ -209,7 +220,7 @@ import.everything<-function(metaFile, loggerFile, tempFile){
   meta.data<-read.metadata(metaFile)
   logger.data<-read.logger(loggerFile)
   temp.data<- read.ibutton(tempFile)
-  process.data(meta=meta.data, logger=log.data, temp=temp.data)
+  process.data(meta=meta.data, logger=logger.data, temp=temp.data)
 }
 
 
