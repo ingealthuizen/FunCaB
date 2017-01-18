@@ -155,8 +155,8 @@ process.data <- function(meta, logger, temp){
 
 #specifying data used in function process.data
 #plotme == TRUE will create plots for every measurement specified in proces.data by start and stoptime in meta.data
-combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
-combine.data
+#combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
+#combine.data
 
 
 # function to reset start and stoptime for CO2 measurement, default is startHappy and endHappy is FALSE
