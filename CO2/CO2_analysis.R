@@ -24,8 +24,8 @@ setStartEndTimes(combine.data)
 
 sites.data.2015<-read.sitefiles("CO2/Data/data_files_2015_pre.xlsx")
 
-fluxcalc(sites.data[[1]]) #calculate flux 1 plot
-overviewsitesdata<-do.call(rbind, lapply(sites.data,fluxcalc)) #calculate flux all plots in all sites.
+fluxcalc(sites.data.2015[[1]]) #calculate flux 1 plot
+overviewsitesdata<-do.call(rbind, lapply(sites.data.2015, fluxcalc)) #calculate flux all plots in all sites.
 
 #explore datapoints graphs
 #allNEEtemp<-ggplot(overviewsitesdata, aes(temp, nee, color=site))+
