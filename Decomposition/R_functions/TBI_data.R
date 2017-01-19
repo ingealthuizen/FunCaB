@@ -146,13 +146,13 @@ ggplot(TBI2016, aes(factor(Temp), k, col=factor(Temp)))+
   facet_grid(. ~ Prec)
 
 #relation k with Temp/Prec against per year 
-ggplot(TBI2, aes(factor(Temp), k, col=factor(Temp)))+
+ggplot(TBI2, aes(factor(Temp), k, col=Temp))+
   geom_boxplot()+
-  facet_grid(. ~ Year)
+  facet_grid( ~ Year)
 
-ggplot(TBI2, aes(factor(Prec), k, col=factor(Prec)))+
+ggplot(TBI2, aes(factor(Prec), k, col=Prec))+
   geom_boxplot()+
-  facet_grid(. ~ Year)
+  facet_grid( ~ Year)
 
 ggplot(TBI2, aes(factor(Temp), k, col=factor(Prec)))+
   geom_boxplot()+
