@@ -1,12 +1,12 @@
 #setwd("O:\\FunCab\\Data\\Rscript")
-source("O:\\FunCab\\Data\\FunCaB Rscript\\HighstatLibV10.R")
-require(readxl) #require packages
-require(ggplot2)
-require(graphics)
-require(stats)
+#source("O:\\FunCab\\Data\\FunCaB Rscript\\HighstatLibV10.R")
+library(readxl) #require packages
+library(ggplot2)
+library(graphics)
+library(stats)
 library(plyr)
 library(lattice)
-require(dplyr)
+library(dplyr)
 
 TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516.xlsx")
 names(TBI)
@@ -17,6 +17,7 @@ TBI$site<- as.factor(TBI$site)
 TBI$year<- as.factor(TBI$year)
 TBI$Temp<- as.factor(TBI$Temp)
 TBI$Prec<- as.factor(TBI$Prec)
+TBI$BurialDate<-TBI$`BurialDate `
 #rounding of numeric data on 2 decimals
 is.num <- sapply(TBI, is.numeric)
 TBI[is.num] <- lapply(TBI[is.num], round, 3)
@@ -28,6 +29,35 @@ TBI$decomp.R<- 1-TBI$Wt
 #exclode rows with NA values
 TBI<- na.exclude(TBI)
 TBI
+
+
+# load climate daily climate data! 
+load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedDailyClimateData2009-2016.RData")
+
+# Function to lookup climate date from recovery and burial dates in the TBI data
+TBI.climateLookup <- function(TBI, climate) {
+  # Function to find the 'colName' climate between the burial and recovery dates in the climate data frame
+  # and apply the 'apFunc' to them
+  climLookup <- function(sampInfo, climate, colName, apFunc, ...) {
+    apFunc(climate[as.Date(climate$Date) > as.Date(sampInfo[1]) & as.Date(climate$Date) < as.Date(sampInfo[2]) & climate$Site == sampInfo[3], colName], ...)
+  }
+  
+  # Find the temperature data and apply the mean function to it
+  tempData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), TBI$site)), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = mean, na.rm = TRUE)
+  # Find the precipitation data and apply the sum function to it
+  precipData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), TBI$site)), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sum, na.rm = TRUE)
+  
+  # Add the temperature and precipitation data to the TBI data frame
+  cbind(
+    TBI,
+    data.frame(
+      gridTemp = tempData,
+      gridPrecip = precipData
+    )
+  )
+}
+
+
 
 #check for outliers
 MyVar <- c("S", "k", "Temp", "Prec", "year")
@@ -59,7 +89,8 @@ TBI.overview <- setNames(TBI.overview, c("site","year","mean.k", "sd.k"))
 TBI.overview
 
 TBI.overview<-  merge(TBI.overview, TBI.meanTempstation, by = c("site","year"))
-##//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+##/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ggplot(TBI.overview, aes(mean.temp, mean.k, col=factor(site)))+
   geom_point()+
   #geom_text(label= factor(site))+
