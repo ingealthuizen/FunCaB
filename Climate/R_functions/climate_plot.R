@@ -6,23 +6,26 @@ ggplot(Temperature_Grid, aes(Month, value, col=Year))+
 ggplot(Precipitation_Grid, aes(Month, value, fill=factor(Year)))+
   geom_bar(stat = "identity", position= "dodge")
 
+ggplot(Prec_total, aes(Year, total_P, fill=Year))+
+  geom_bar(stat = "identity", position= "dodge")
+
 #Temperature and Precipitation accros grid split by years
 ggplot(Temperature_Grid, aes(Month, value, col=Site)) + 
     geom_smooth()+
     facet_grid(~Year)
       
-ggplot(Precipitation_Grid, aes(Month, value, fill=Site)) + 
-  geom_bar(stat = "identity", position= "dodge")+
-  facet_grid(~Year)
+#ggplot(Precipitation_Grid, aes(Month, value, fill=Site)) + 
+#  geom_bar(stat = "identity", position= "dodge")+
+#  facet_grid(~Year)
 
 # combination of overall Precipitation and Temperature across years 
-ggplot(Precipitation_Grid, aes(Month, value, fill=Site)) + 
+ggplot(Precipitation_Grid, aes(Month, value, fill=Year)) + 
   geom_bar(stat = "identity", position= "dodge") +
   geom_smooth(data=Temperature_Grid, aes(Month, value), col= "black")+
   scale_fill_grey()+
   theme_classic()
 
-#Temperature and Precipitation accros grid split by years
+#Temperature and Precipitation accros grid split by years                                                        
 ggplot(T_mean, aes(Site, mn_T, col=Site)) + 
   geom_bar(stat = "identity", position= "dodge")+
   facet_grid(~Year)
