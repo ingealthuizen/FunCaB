@@ -1,5 +1,5 @@
-#setwd("O:\\FunCab\\Data\\Rscript")
-#source("O:\\FunCab\\Data\\FunCaB Rscript\\HighstatLibV10.R")
+# TBI data
+#source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 library(readxl) #require packages
 library(ggplot2)
 library(graphics)
@@ -43,35 +43,56 @@ TBI.climateLookup <- function(TBI, climate) {
   }
   
   # Find the temperature data and apply the mean function to it
-  tempData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), TBI$site)), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = mean, na.rm = TRUE)
+  tempData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = mean, na.rm = TRUE)
   # Find the precipitation data and apply the sum function to it
-  precipData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), TBI$site)), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sum, na.rm = TRUE)
+  precipData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sum, na.rm = TRUE)
   
   # Add the temperature and precipitation data to the TBI data frame
   cbind(
     TBI,
     data.frame(
       gridTemp = tempData,
-      gridPrecip = precipData
+      gridPrec = precipData
     )
   )
 }
 
+TBI<-TBI.climateLookup(TBI, climate)
+
+# add data from Serge 2010-2012 to dataframe
+site_variables<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
+
+#calculate mean values for all variables per site excluding NA's
+mean.site.variables<-site_variables %>%
+                          group_by(site) %>%
+                          summarise_each(funs(mean(., na.rm =TRUE))) 
+
+# combine data mean.site.variables with TBI based on site
+TBI_variables<-right_join(TBI, mean.site.variables, by= "site")
+is.num <- sapply(TBI_variables, is.numeric)
+TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 2)
 
 
 #check for outliers
-MyVar <- c("S", "k", "Temp", "Prec", "year")
-Mydotplot(TBI[, MyVar])
+MyVar <- c("S", "k", "gridTemp", "gridPrecip", "year")
+Mydotplot(TBI[, MyVar]) # outlier S>0.6 and S<0
 
-# outlier S>0.6 and S<0
-pairs(TBI[,MyVar], lower.panel = panel.cor)
-# outlier S>0.6 and S<0
+#Remove outliers from dataframe
 
-I<- TBI$S>0.6 | TBI$S<0 | TBI$k<0 | TBI$k>0.05 # locate outliers k>0.05
-I
+TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<0 | TBI$k>0.05),]
 
-TBI2 <- TBI[c(-140, -151, -154, -194, -328), ] # taking out ouliers S>0.6 and S<0
-Mydotplot(TBI2[, MyVar])
+ggplot(TBI, aes(k, gridTemp, col=factor(Temp)))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+ggplot(TBI, aes(k, gridPrec, col=factor(Prec)))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+
+TBI.model<- lm(k~gridTemp*gridPrec, data = TBI)
+summary(TBI.model)
+
 
 ## first run TBI_climate.R to get TBI.meanTemp!!!
 #add temperature data to TBI data
