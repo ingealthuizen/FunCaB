@@ -73,10 +73,23 @@ is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 2)
 
 
-#check for outliers
-MyVar <- c("S", "k", "gridTemp", "gridPrecip", "year")
-Mydotplot(TBI[, MyVar]) # outlier S>0.6 and S<0
+# load soil moisture data 2014-2016
+soilmoisture<-read_excel("O:/FunCab/Data/FunCaB/Climate/Data/soil_moisture_141516.xlsx")
+soilmoisture$year<- as.factor(soilmoisture$year)
+soilmoisture$site<- as.factor(soilmoisture$site)
+mean.site.moisture<- soilmoisture %>%
+                      group_by(site, year) %>%
+                      summarise(soil_moist = mean(mean_moist, na.rm =TRUE))
 
+# combine data mean.site.moisture with TBI based on site
+TBI_variables<-right_join(TBI_variables, mean.site.moisture, by= c("site" = "site", "year" = "year" ))
+is.num <- sapply(TBI_variables, is.numeric)
+TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 2)
+
+#check for outliers
+MyVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_moist")
+Mydotplot(TBI_variables[, MyVar]) # outlier S>0.6 and S<0
+pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 #Remove outliers from dataframe
 
 TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<0 | TBI$k>0.05),]
