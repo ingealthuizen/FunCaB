@@ -1,5 +1,5 @@
 # TBI data
-#source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
+source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 library(readxl) #require packages
 library(ggplot2)
 library(graphics)
@@ -69,8 +69,6 @@ mean.site.variables<-site_variables %>%
 
 # combine data mean.site.variables with TBI based on site
 TBI_variables<-right_join(TBI, mean.site.variables, by= "site")
-is.num <- sapply(TBI_variables, is.numeric)
-TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 2)
 
 
 # load soil moisture data 2014-2016
@@ -82,12 +80,53 @@ mean.site.moisture<- soilmoisture %>%
                       summarise(soil_moist = mean(mean_moist, na.rm =TRUE))
 
 # combine data mean.site.moisture with TBI based on site
-TBI_variables<-right_join(TBI_variables, mean.site.moisture, by= c("site" = "site", "year" = "year" ))
+TBI_variables<-full_join(TBI_variables, mean.site.moisture, by= c("site" = "site", "year" = "year" ))
+
+
+# load vegetation biomass data 2014-2016 and add as variables to TBI_variables
+biomass_data<- read_excel("O:/FunCab/Data/FunCaB/Other/Vegetation/biomass_1415.xlsx")
+biomass_data$Year<- as.factor(biomass_data$Year)
+biomass_data$Site<- as.factor(biomass_data$Site)
+
+mean.site.biomass<-biomass_data %>%
+                    group_by(Site, Year) %>%
+                    summarise_each(funs(mean(., na.rm =TRUE))) 
+
+TBI_variables<-left_join(TBI_variables, mean.site.biomass, by= c("site" = "Site", "year" = "Year" ))
+
+
+# load vegetation diversity data and subset years 2015-2016 
+diversity_data<- read.table ("O:/FunCab/Data/FunCaB/Other/Vegetation/diversity.txt", header= TRUE)
+
+#rename siteID to match TBI_variables
+newnames<-c("Alr","Arh", "Fau", "Gud", "Hog","Lav", "Ovs", "Ram", "Skj", "Ulv", "Ves", "Vik")
+names(newnames)<-c("Alrust","Arhelleren","Fauske","Gudmedelen","Hogsete","Lavisdalen", "Ovstedal","Rambera","Skjellingahaugen","Ulvhaugen","Veskre","Vikesland")
+diversity_data$site<-newnames[diversity_data$siteID]
+
+diversity_data<- subset(diversity_data, Year>=2014)
+diversity_data$Year<- as.factor(diversity_data$Year)
+
+# calculate mean richness and diversity and add as variables to TBI_variables
+mean.site.diversity<-diversity_data %>%
+                      group_by(site, Year) %>%
+                      summarise(div = mean(diversity, na.rm =TRUE), rich = mean(richness, na.rm =TRUE)) 
+
+
+TBI_variables<-left_join(TBI_variables, mean.site.diversity, by= c("site" = "site", "year" = "Year" ))
+
+##rounding of numeric data on 2 decimals
 is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 2)
 
-#check for outliers
-MyVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_moist")
+# Remove unimportant and duplicate columns
+TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22,27,28, 43)]
+TBI_variables$year<- as.numeric(TBI_variables$year)
+
+
+# create MyVar for plotting
+MyVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "rich", "div" )
+
+
 Mydotplot(TBI_variables[, MyVar]) # outlier S>0.6 and S<0
 pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 #Remove outliers from dataframe
