@@ -30,6 +30,9 @@ TBI$decomp.R<- 1-TBI$Wt
 TBI<- na.exclude(TBI)
 TBI
 
+# remove outliers (5 measurements)
+TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k=<0 | TBI$k>0.05),]
+
 
 # load climate daily climate data! 
 load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedDailyClimateData2009-2016.RData")
@@ -116,34 +119,43 @@ TBI_variables<-left_join(TBI_variables, mean.site.diversity, by= c("site" = "sit
 
 ##rounding of numeric data on 2 decimals
 is.num <- sapply(TBI_variables, is.numeric)
-TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 2)
+TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 3)
 
 # Remove unimportant and duplicate columns
-TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22,27,28, 43)]
+TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22, 26:28, 43)]
 TBI_variables$year<- as.numeric(TBI_variables$year)
 
+#==============================================================================================================================
 
-# create MyVar for plotting
-MyVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "rich", "div" )
+# create AllVar for plotting
+AllVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "rich", "div" )
 
+MyVar <- c("S", "k", "gridTemp", "gridPrec", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div" )
 
-Mydotplot(TBI_variables[, MyVar]) # outlier S>0.6 and S<0
+# quick plots to look at relations between variables
+Mydotplot(TBI_variables[, MyVar]) 
 pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
-#Remove outliers from dataframe
-
-TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<0 | TBI$k>0.05),]
-
-ggplot(TBI, aes(k, gridTemp, col=factor(Temp)))+
-  geom_point()+
-  geom_smooth(method = "lm")
-
-ggplot(TBI, aes(k, gridPrec, col=factor(Prec)))+
-  geom_point()+
-  geom_smooth(method = "lm")
 
 
+#==============================================================================================================================
+# calculate CV for GridTemp and GridPrec per site per year
+CV<- function (mean, sd){
+  (sd/mean)*100  }
+
+TBI_summary<-TBI_variables %>%
+              group_by(site, year)%>%
+              summarise(mean= mean(k), sd = sd(k), cv = CV(mean, sd))
+
+
+# create model 
 TBI.model<- lm(k~gridTemp*gridPrec, data = TBI)
 summary(TBI.model)
+
+E1 <- resid(TBI.model)
+
+
+
+
 
 
 ## first run TBI_climate.R to get TBI.meanTemp!!!
