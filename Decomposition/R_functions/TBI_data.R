@@ -31,7 +31,7 @@ TBI<- na.exclude(TBI)
 TBI
 
 # remove outliers (5 measurements)
-TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k=<0 | TBI$k>0.05),]
+TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<=0 | TBI$k>0.05),]
 
 
 # load climate daily climate data! 
@@ -94,6 +94,7 @@ biomass_data$Site<- as.factor(biomass_data$Site)
 mean.site.biomass<-biomass_data %>%
                     group_by(Site, Year) %>%
                     summarise_each(funs(mean(., na.rm =TRUE))) 
+                    
 
 TBI_variables<-left_join(TBI_variables, mean.site.biomass, by= c("site" = "Site", "year" = "Year" ))
 
@@ -140,22 +141,45 @@ pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 #==============================================================================================================================
 # calculate CV for GridTemp and GridPrec per site per year
 CV<- function (mean, sd){
-  (sd/mean)*100  }
+    (sd/mean)*100  }
 
 TBI_summary<-TBI_variables %>%
               group_by(site, year)%>%
               summarise(mean= mean(k), sd = sd(k), cv = CV(mean, sd))
 
 
-# create model 
-TBI.model<- lm(k~gridTemp*gridPrec, data = TBI)
+# model TBI data with climate variables
+TBI.model<- lm(k~ gridTemp + gridPrec, data = TBI_variables)
 summary(TBI.model)
-
-E1 <- resid(TBI.model)
-
+TBI_variables$Resid<- resid(TBI.model)
 
 
+# loop for plotting TBI.res against other variables 
+plotDF <- melt(TBI_variables[, c(5, 17:40)], id="Resid", na.rm =TRUE)
 
+ggplot(plotDF, aes(x=value, y=Resid)) + 
+  geom_point(shape= 1)+      
+  geom_hline(yintercept = 0)+
+  facet_wrap(~ variable, scales = "free_x")
+  
+
+
+
+
+
+  
+
+  multiplot()
+#calculate residuals of TBI model
+res<-resid(TBI.model)
+
+#adding residuals as variable to TBI_variables
+TBI_variables$residuals<- res
+
+
+MyVar <- c("pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div" , "residuals")
+Mydotplot(TBI_variables[, MyVar]) 
+pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 
 
 ## first run TBI_climate.R to get TBI.meanTemp!!!
