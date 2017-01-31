@@ -48,7 +48,7 @@ grid_sT<- grid_sT[complete.cases(grid_sT),]
 # retrieve start and end time of TBI incubation time 
 TBI_time<-grid_sT %>%
           group_by(Site) %>%
-          summarise(start_date = first(date), end_date = last(date))
+          summarise(BurialDate = first(date), RecoveryDate = last(date))
   
 
 # load climate daily gridded climate data 
@@ -74,7 +74,7 @@ TBI.climateLookup <- function(TBI_time, climate) {
     outMat
   }
   # Apply the climate retrieval function to each site and compress into one giant data frame
-  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$start_date), as.character(TBI_time$end_date), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature"))
+  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature"))
   
   tempData
 }
@@ -86,44 +86,19 @@ Grid.Temp<-TBI.climateLookup(TBI_time, climate)
 load("O:/SeedClim-Climate-Data/Daily.Temperature_2008-2016.RData")
 
 climStation_sT<- filter(dailyTemperature, logger == "tempsoil")
-climStation_sT<- rename(climStation_sT, Date = date)
+climStation_sT<- rename(climStation_sT, Date = date, Temperature = value, Site = site)
 
 TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516.xlsx")
 TBI$BurialDate<-as.Date(TBI$`BurialDate `)
-TBI$RecoveryDate<-as.Date(TBI$RecoveryDate)
+TBI<-rename(TBI, Site = site)
 
 TBI_times<- TBI %>%
-            group_by(site, RecoveryDate) %>%
+            group_by(Site, RecoveryDate) %>%
             distinct(BurialDate)
 
 TBI_times <- TBI_times[c(2, 1,3)]
 TBI_times<- TBI_times[complete.cases(TBI_times),]
 
-
-# Function to lookup climate date from start and end dates in the TBI_ibutton data 2014
-TBI.climateLookup <- function(TBI_time, climate) {
-  # Function to retrieve a data frame of the climate at the sites between the burial and recovery dates
-  climRetrieval <- function(sampInfo, climate, colName) {
-    # Boolean denoting the rows of the climate data that we want
-    climBool <- as.Date(climate$Date) >= as.Date(sampInfo[1]) & as.Date(climate$Date) <= as.Date(sampInfo[2]) & climate$site == sampInfo[3]
-    # Retieve the climate from the relevant rows of the climate data
-    curClim <- climate[climBool, colName]
-    climDates <- as.Date(climate[climBool, "Date"])
-    # Initialise an output matrix
-    outMat <- matrix(NA, ncol = 3, nrow = length(curClim))
-    colnames(outMat) <- c(colName, "Site", "Date")
-    # Convert matrix to data.frame
-    outMat <- as.data.frame(outMat)
-    outMat[, colName] <- curClim
-    outMat$Site <- rep(sampInfo[3], length(curClim))
-    outMat$Date <- climDates
-    outMat
-  }
-  # Apply the climate retrieval function to each site and compress into one giant data frame
-  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "value"))
-  
-  tempData
-}
 
 # create dataframe with soilTemperatures of all sites measured by climate stations
 Station.Temp<-TBI.climateLookup(TBI_times, as.data.frame(climStation_sT))
@@ -132,33 +107,12 @@ Station.Temp$month<-format(Station.Temp$Date, "%m")
 Station.Temp$year<-format(Station.Temp$Date, "%Y")
 
 #subset only data from particular year
+Station_2014<- Station.Temp %>%
+  filter(year == 2014)
+
 Station_2015<- Station.Temp %>%
               filter(year == 2015)
 
-# Function to lookup climate date from start and end dates in the TBI_ibutton data 2014
-TBI.climateLookup <- function(TBI_time, climate) {
-  # Function to retrieve a data frame of the climate at the sites between the burial and recovery dates
-  climRetrieval <- function(sampInfo, climate, colName) {
-    # Boolean denoting the rows of the climate data that we want
-    climBool <- as.Date(climate$Date) >= as.Date(sampInfo[1]) & as.Date(climate$Date) <= as.Date(sampInfo[2]) & climate$Site == sampInfo[3]
-    # Retieve the climate from the relevant rows of the climate data
-    curClim <- climate[climBool, colName]
-    climDates <- as.Date(climate[climBool, "Date"])
-    # Initialise an output matrix
-    outMat <- matrix(NA, ncol = 3, nrow = length(curClim))
-    colnames(outMat) <- c(colName, "Site", "Date")
-    # Convert matrix to data.frame
-    outMat <- as.data.frame(outMat)
-    outMat[, colName] <- curClim
-    outMat$Site <- rep(sampInfo[3], length(curClim))
-    outMat$Date <- climDates
-    outMat
-  }
-  # Apply the climate retrieval function to each site and compress into one giant data frame
-  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature"))
-  
-  tempData
-}
 
 # create dataframe with soilTemperatures of all sites from gridded data
 Gridded.Temp <-TBI.climateLookup(TBI_times, climate)
@@ -170,6 +124,7 @@ Gridded.Temp$year<-format(Gridded.Temp$Date, "%Y")
 Gridded_2015 <-Gridded.Temp %>%
                 filter(year == 2015)
 
+
 #join temperature data of ibuttons and gridded climate data together by Site and Date
 TBI_temperature<-left_join(Grid.Temp, grid_sT, by= c("Site" = "Site", "Date" = "date" ))
 TBI_temperature<-left_join(TBI_temperature, Station_2014, by= c ("Site" = "Site", "Date" = "Date"))
@@ -177,25 +132,28 @@ TBI_temperature<-left_join(TBI_temperature, Station_2014, by= c ("Site" = "Site"
 TBI_temp2015 <-right_join(Station_2015, Gridded_2015, by= c("Site" = "Site", "Date" = "Date" ))
 
 
-ggplot(TBI_temperature, aes(Date))+
-  geom_line(aes(y= Temperature, col= "Temperature" ))+
-  geom_line(aes(y= mn_sT, col= "mn_sT"))+
-  geom_line(aes(y= value, col= "value"))+
+ggplot(TBI_temperature, aes(Date, color= loggertype))+
+  geom_line(aes(y= Temperature.x, col= "Gridded" ))+
+  geom_line(aes(y= mn_sT, col= "Ibutton_sT"))+
+  geom_line(aes(y= Temperature.y, col= "Station_sT"))+
+  scale_linetype_discrete(name= "loggertype", labels = c("Ibutton", "Gridded", "Station"))+
   facet_wrap(~Site)+
+  labs(x = "Date 2014", y= "Temperature (C)")+
   theme_bw()
 
-ggplot(TBI_temp2015, aes(Date))+
-  geom_line(aes(y= Temperature, col= "Temperature" ))+
-  geom_line(aes(y= value, col= "value"))+
+ggplot(TBI_temp2015, aes(Date, color = loggertype))+
+  geom_line(aes(y= Temperature.x, col= "Gridded" ))+
+  geom_line(aes(y= Temperature.y, col= "Station_sT"))+
   facet_wrap(~Site)+
+  labs(x = "Date 2015", y= "Temperature (C)")+
   theme_bw()
+
 
 
 #calculate mean soil Temperature from ibuttons and mean gridded Temperature over incubation period
 TBI_temperature %>%
   group_by(Site)%>%
   summarise(sT= mean(mn_sT), gridT = mean(Temperature))
-
 
 
 #plot soilTemp from all loggers over incubation time
