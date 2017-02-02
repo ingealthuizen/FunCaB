@@ -30,8 +30,8 @@ TBI$decomp.R<- 1-TBI$Wt
 TBI<- na.exclude(TBI)
 TBI
 
-# remove outliers (5 measurements)
-TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<=0 | TBI$k>0.05),]
+# remove outliers (7 measurements)
+TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<=0 | TBI$k>0.03),]
 
 
 # load climate daily climate data! 
@@ -45,22 +45,30 @@ TBI.climateLookup <- function(TBI, climate) {
     apFunc(climate[as.Date(climate$Date) > as.Date(sampInfo[1]) & as.Date(climate$Date) < as.Date(sampInfo[2]) & climate$Site == sampInfo[3], colName], ...)
   }
   
-  # Find the temperature data and apply the mean function to it
+  # Find the temperature data and apply the mean and variance function to it
   tempData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = mean, na.rm = TRUE)
-  # Find the precipitation data and apply the sum function to it
+  tempVar <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = var, na.rm = TRUE)
+  
+  # Find the precipitation data and apply the sum and variance function to it
   precipData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sum, na.rm = TRUE)
+    precipVar <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = var, na.rm = TRUE)
+  
+  
   
   # Add the temperature and precipitation data to the TBI data frame
   cbind(
     TBI,
     data.frame(
       gridTemp = tempData,
-      gridPrec = precipData
+      Temp.Var = tempVar,
+      gridPrec = precipData,
+      Prec.Var = precipVar
     )
   )
 }
 
 TBI<-TBI.climateLookup(TBI, climate)
+
 
 # add data from Serge 2010-2012 to dataframe
 site_variables<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
@@ -107,31 +115,56 @@ newnames<-c("Alr","Arh", "Fau", "Gud", "Hog","Lav", "Ovs", "Ram", "Skj", "Ulv", 
 names(newnames)<-c("Alrust","Arhelleren","Fauske","Gudmedelen","Hogsete","Lavisdalen", "Ovstedal","Rambera","Skjellingahaugen","Ulvhaugen","Veskre","Vikesland")
 diversity_data$site<-newnames[diversity_data$siteID]
 
+#Select diversity data from 2015 and 2016
 diversity_data<- subset(diversity_data, Year>=2014)
 diversity_data$Year<- as.factor(diversity_data$Year)
 
 # calculate mean richness and diversity and add as variables to TBI_variables
-mean.site.diversity<-diversity_data %>%
+mean.Plant.diversity<-diversity_data %>%
                       group_by(site, Year) %>%
                       summarise(div = mean(diversity, na.rm =TRUE), rich = mean(richness, na.rm =TRUE)) 
 
 
-TBI_variables<-left_join(TBI_variables, mean.site.diversity, by= c("site" = "site", "year" = "Year" ))
+TBI_variables<-left_join(TBI_variables, mean.Plant.diversity, by= c("site" = "site", "year" = "Year" ))
+
+
+microbial_data<- read_excel("O:/FunCab/Data/FunCaB/Decomposition/Data/TBI/Microbialdiversity_turfs.xlsx")
+
+#Select diversity data from 2015 and 2016
+microbial_data<- subset(microbial_data, Treat == "Control")
+
+# calculate mean richness and diversity and add as variables to TBI_variables
+mean.Micro.diversity<-microbial_data %>%
+                      group_by(Site) %>%
+                      summarise(M_Richnes = mean(Rarefied_richness), M_Shannon.H = mean(Shannon_H), M_P.even = mean(Pielou_evenness), M_Rar.even = mean(Rarefied_evenness), M_Simpson.I = mean(Simpson_index)) 
+
+TBI_variables<-left_join(TBI_variables, mean.Micro.diversity, by= c("site" = "Site"))
+
 
 ##rounding of numeric data on 2 decimals
 is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 3)
 
 # Remove unimportant and duplicate columns
-TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22, 26:28, 43)]
+TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22, 28:30, 45)]
 TBI_variables$year<- as.numeric(TBI_variables$year)
+
+#create new variable rain factor (RF), Lang et al 1976 Water and Plant Life. Springer: Berlin, Heidelberg, New York 
+#the ratio between mean precipitation and mean temperature, or RF = P · T−1
+
+TBI_variables$RF<- TBI_variables$gridPrec * (TBI_variables$gridTemp)^-1
+
+#change order of sites in dataframe
+TBI_variables$site <- factor(TBI_variables$site, levels = c("Fau","Vik","Arh","Ovs","Alr","Hog","Ram","Ves", "Ulv","Lav","Gud",                                                              "Skj"))
+
+#write.table(TBI_variables, file = "O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_variables.txt")
 
 #==============================================================================================================================
 
 # create AllVar for plotting
 AllVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "rich", "div" )
 
-MyVar <- c("S", "k", "gridTemp", "gridPrec", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div" )
+MyVar <- c("S", "k", "gridTemp", "gridPrec", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div", "M_Richnes", "M_Shannon.H", "M_P.even" , "M_Rar.even" , "M_Simpson.I")
 
 # quick plots to look at relations between variables
 Mydotplot(TBI_variables[, MyVar]) 
@@ -147,34 +180,32 @@ TBI_summary<-TBI_variables %>%
               group_by(site, year)%>%
               summarise(mean= mean(k), sd = sd(k), cv = CV(mean, sd))
 
+TBI.oav <- aov(k ~ gridTemp, data=TBI_variables)
+plot(TBI.oav)
+summary(TBI.oav)
+TukeyHSD(fit)
+
 
 # model TBI data with climate variables
-TBI.model<- lm(k~ gridTemp + gridPrec, data = TBI_variables)
+TBI.model<- lm(k~ gridTemp + gridPrec + factor(Temp.x) + factor(Prec.x) , data = TBI_variables)
 summary(TBI.model)
+plot(TBI.model)
 TBI_variables$Resid<- resid(TBI.model)
 
 
 # loop for plotting TBI.res against other variables 
-plotDF <- melt(TBI_variables[, c(5, 17:40)], id="Resid", na.rm =TRUE)
+plotDF <- melt(TBI_variables[, c(3, 5, 17:41)], id= c ("Resid","Temp.x"), na.rm =TRUE)
 
-ggplot(plotDF, aes(x=value, y=Resid)) + 
+ggplot(plotDF, aes(x=value, y=Resid, col=Temp.x)) + 
   geom_point(shape= 1)+      
   geom_hline(yintercept = 0)+
-  facet_wrap(~ variable, scales = "free_x")
+  facet_wrap(~ variable, scales = "free_x")+
+  scale_color_discrete(name= "elevation", labels = c("alp", "sub", "bor"))+
+    theme_bw()+
+  theme(axis.text = element_text(size = 10), axis.title = element_text(size = 15), legend.title=element_text(size=14),             legend.text=element_text(size=12))
   
 
 
-
-
-
-  
-
-  multiplot()
-#calculate residuals of TBI model
-res<-resid(TBI.model)
-
-#adding residuals as variable to TBI_variables
-TBI_variables$residuals<- res
 
 
 MyVar <- c("pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div" , "residuals")
