@@ -7,6 +7,7 @@ library(stats)
 library(plyr)
 library(lattice)
 library(dplyr)
+library(reshape2)
 
 TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516.xlsx")
 names(TBI)
@@ -30,9 +31,21 @@ TBI$decomp.R<- 1-TBI$Wt
 TBI<- na.exclude(TBI)
 TBI
 
+
 # remove outliers (7 measurements)
 TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<=0 | TBI$k>0.03),]
 
+# square root transform data to normalize 
+#hist(TBI$k^(1/3))
+#hist(sqrt(TBI$k))
+#qqnorm(sqrt(TBI$k))
+#qqnorm(TBI$k^(1/3))
+#qqline(TBI$k^(1/3), col = "red")
+#ad.test(TBI$k^(1/3))
+#ad.test(sqrt(TBI$k))
+
+
+TBI$sqrt.k<- sqrt(TBI$k)
 
 # load climate daily climate data! 
 load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedDailyClimateData2009-2016.RData")
@@ -122,7 +135,7 @@ diversity_data$Year<- as.factor(diversity_data$Year)
 # calculate mean richness and diversity and add as variables to TBI_variables
 mean.Plant.diversity<-diversity_data %>%
                       group_by(site, Year) %>%
-                      summarise(div = mean(diversity, na.rm =TRUE), rich = mean(richness, na.rm =TRUE)) 
+                      summarise(P_div = mean(diversity, na.rm =TRUE), P_even = mean(evenness, na.rm =TRUE)) 
 
 
 TBI_variables<-left_join(TBI_variables, mean.Plant.diversity, by= c("site" = "site", "year" = "Year" ))
@@ -146,7 +159,7 @@ is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 3)
 
 # Remove unimportant and duplicate columns
-TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22, 28:30, 45)]
+TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22, 29:31, 46)]
 TBI_variables$year<- as.numeric(TBI_variables$year)
 
 #create new variable rain factor (RF), Lang et al 1976 Water and Plant Life. Springer: Berlin, Heidelberg, New York 
@@ -162,9 +175,9 @@ TBI_variables$site <- factor(TBI_variables$site, levels = c("Fau","Vik","Arh","O
 #==============================================================================================================================
 
 # create AllVar for plotting
-AllVar <- c("S", "k", "gridTemp", "gridPrec", "year", "Slope", "Aspect", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "SoilN", "SoilC", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "rich", "div" )
+AllVar <- c("S", "k", "gridTemp", "gridPrec", "Temp.Var", "Prec.Var", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "P_div", "P_even", "M_Richnes", "M_Shannon.H", "M_P.even" , "M_Rar.even" , "M_Simpson.I")
 
-MyVar <- c("S", "k", "gridTemp", "gridPrec", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div", "M_Richnes", "M_Shannon.H", "M_P.even" , "M_Rar.even" , "M_Simpson.I")
+MyVar <- c("gridTemp", "gridPrec", "Temp.Var", "AvailN", "Plant_comm", "Root", "soil_CN", "soil_moist", "Total", "P_div", "M_Shannon.H")
 
 # quick plots to look at relations between variables
 Mydotplot(TBI_variables[, MyVar]) 
@@ -180,21 +193,21 @@ TBI_summary<-TBI_variables %>%
               group_by(site, year)%>%
               summarise(mean= mean(k), sd = sd(k), cv = CV(mean, sd))
 
-TBI.oav <- aov(k ~ gridTemp, data=TBI_variables)
+TBI.oav <- aov(sqrt.k ~ factor(year), data=TBI_variables)
 plot(TBI.oav)
 summary(TBI.oav)
-TukeyHSD(fit)
+TukeyHSD(TBI.oav)
 
 
 # model TBI data with climate variables
-TBI.model<- lm(k~ gridTemp + gridPrec + factor(Temp.x) + factor(Prec.x) , data = TBI_variables)
+TBI.model<- lm(sqrt.k ~ gridTemp + gridPrec + factor(Temp.x) + factor(Prec.x) , data = TBI_variables)
 summary(TBI.model)
 plot(TBI.model)
 TBI_variables$Resid<- resid(TBI.model)
 
 
 # loop for plotting TBI.res against other variables 
-plotDF <- melt(TBI_variables[, c(3, 5, 17:41)], id= c ("Resid","Temp.x"), na.rm =TRUE)
+plotDF <- melt(TBI_variables[, c(3, 5, 17:49)], id= c ("Resid","Temp.x"), na.rm =TRUE)
 
 ggplot(plotDF, aes(x=value, y=Resid, col=Temp.x)) + 
   geom_point(shape= 1)+      
