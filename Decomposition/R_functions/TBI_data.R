@@ -1,17 +1,18 @@
 # TBI data
+# First run TBI_ibutton for getting Modelled Temperature 
+
 source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 library(readxl) #require packages
 library(ggplot2)
 library(graphics)
 library(stats)
-library(plyr)
+#library(plyr)
 library(lattice)
 library(dplyr)
 library(reshape2)
 
-TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516.xlsx")
-names(TBI)
-str(TBI)
+TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516new.xlsx")
+
 
 #change particular columns to factors 
 TBI$site<- as.factor(TBI$site)
@@ -27,25 +28,6 @@ TBI[is.num] <- lapply(TBI[is.num], round, 3)
 # new column for fraction decomposed red tea
 TBI$decomp.R<- 1-TBI$Wt
 
-#exclode rows with NA values
-TBI<- na.exclude(TBI)
-TBI
-
-
-# remove outliers (7 measurements)
-TBI<-TBI[!(TBI$S>0.6 | TBI$S<0 |TBI$k<=0 | TBI$k>0.03),]
-
-# square root transform data to normalize 
-#hist(TBI$k^(1/3))
-#hist(sqrt(TBI$k))
-#qqnorm(sqrt(TBI$k))
-#qqnorm(TBI$k^(1/3))
-#qqline(TBI$k^(1/3), col = "red")
-#ad.test(TBI$k^(1/3))
-#ad.test(sqrt(TBI$k))
-
-
-TBI$sqrt.k<- sqrt(TBI$k)
 
 # load climate daily climate data! 
 load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedDailyClimateData2009-2016.RData")
@@ -83,28 +65,42 @@ TBI.climateLookup <- function(TBI, climate) {
 TBI<-TBI.climateLookup(TBI, climate)
 
 
+# bind modeled temperature to TBI_variables
+TBI$ID <- paste(TBI$site, TBI$year)
+TBI$modelTemp<- mean_Temp$model_T[match(TBI$ID,mean_Temp$ID)]
+
+
 # add data from Serge 2010-2012 to dataframe
 site_variables<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
 
 #calculate mean values for all variables per site excluding NA's
-mean.site.variables<-site_variables %>%
+site_variables<-site_variables %>%
                           group_by(site) %>%
                           summarise_each(funs(mean(., na.rm =TRUE))) 
 
 # combine data mean.site.variables with TBI based on site
-TBI_variables<-right_join(TBI, mean.site.variables, by= "site")
+TBI_variables<-right_join(TBI, site_variables, by= "site")
+
+# load and read litter CN data
+Litter_data<- read_excel("O:/FunCab/Data/FunCaB/Decomposition/Data/Litter/Litter_CN2016.xlsx")
+Litter_data<- Litter_data %>%
+              group_by(site) %>%
+              summarise( Litter.C = mean(C), Litter.N = mean(N), Litter.CN = mean(CNratio))
+
+# combine data mean.site.variables with TBI based on site
+TBI_variables<-left_join(TBI_variables, Litter_data, by= "site")
 
 
 # load soil moisture data 2014-2016
 soilmoisture<-read_excel("O:/FunCab/Data/FunCaB/Climate/Data/soil_moisture_141516.xlsx")
 soilmoisture$year<- as.factor(soilmoisture$year)
 soilmoisture$site<- as.factor(soilmoisture$site)
-mean.site.moisture<- soilmoisture %>%
+soilmoisture<- soilmoisture %>%
                       group_by(site, year) %>%
                       summarise(soil_moist = mean(mean_moist, na.rm =TRUE))
 
 # combine data mean.site.moisture with TBI based on site
-TBI_variables<-full_join(TBI_variables, mean.site.moisture, by= c("site" = "site", "year" = "year" ))
+TBI_variables<-full_join(TBI_variables, soilmoisture, by= c("site" = "site", "year" = "year" ))
 
 
 # load vegetation biomass data 2014-2016 and add as variables to TBI_variables
@@ -112,46 +108,46 @@ biomass_data<- read_excel("O:/FunCab/Data/FunCaB/Other/Vegetation/biomass_1415.x
 biomass_data$Year<- as.factor(biomass_data$Year)
 biomass_data$Site<- as.factor(biomass_data$Site)
 
-mean.site.biomass<-biomass_data %>%
+biomass_data<-biomass_data %>%
                     group_by(Site, Year) %>%
                     summarise_each(funs(mean(., na.rm =TRUE))) 
                     
 
-TBI_variables<-left_join(TBI_variables, mean.site.biomass, by= c("site" = "Site", "year" = "Year" ))
+TBI_variables<-left_join(TBI_variables, biomass_data, by= c("site" = "Site", "year" = "Year" ))
 
 
 # load vegetation diversity data and subset years 2015-2016 
-diversity_data<- read.table ("O:/FunCab/Data/FunCaB/Other/Vegetation/diversity.txt", header= TRUE)
+P.diversity_data<- read.table ("O:/FunCab/Data/FunCaB/Other/Vegetation/diversity.txt", header= TRUE)
 
 #rename siteID to match TBI_variables
 newnames<-c("Alr","Arh", "Fau", "Gud", "Hog","Lav", "Ovs", "Ram", "Skj", "Ulv", "Ves", "Vik")
 names(newnames)<-c("Alrust","Arhelleren","Fauske","Gudmedelen","Hogsete","Lavisdalen", "Ovstedal","Rambera","Skjellingahaugen","Ulvhaugen","Veskre","Vikesland")
-diversity_data$site<-newnames[diversity_data$siteID]
+P.diversity_data$site<-newnames[P.diversity_data$siteID]
 
 #Select diversity data from 2015 and 2016
-diversity_data<- subset(diversity_data, Year>=2014)
-diversity_data$Year<- as.factor(diversity_data$Year)
+P.diversity_data<- subset(P.diversity_data, Year>=2014)
+P.diversity_data$Year<- as.factor(P.diversity_data$Year)
 
 # calculate mean richness and diversity and add as variables to TBI_variables
-mean.Plant.diversity<-diversity_data %>%
+P.diversity_data<-P.diversity_data %>%
                       group_by(site, Year) %>%
                       summarise(P_div = mean(diversity, na.rm =TRUE), P_even = mean(evenness, na.rm =TRUE)) 
 
 
-TBI_variables<-left_join(TBI_variables, mean.Plant.diversity, by= c("site" = "site", "year" = "Year" ))
+TBI_variables<-left_join(TBI_variables, P.diversity_data, by= c("site" = "site", "year" = "Year" ))
 
-
+# read in microbial data
 microbial_data<- read_excel("O:/FunCab/Data/FunCaB/Decomposition/Data/TBI/Microbialdiversity_turfs.xlsx")
 
 #Select diversity data from 2015 and 2016
 microbial_data<- subset(microbial_data, Treat == "Control")
 
 # calculate mean richness and diversity and add as variables to TBI_variables
-mean.Micro.diversity<-microbial_data %>%
+microbial_data<-microbial_data %>%
                       group_by(Site) %>%
-                      summarise(M_Richnes = mean(Rarefied_richness), M_Shannon.H = mean(Shannon_H), M_P.even = mean(Pielou_evenness), M_Rar.even = mean(Rarefied_evenness), M_Simpson.I = mean(Simpson_index)) 
+                      summarise(M_Richnes = mean(Rarefied_richness), M_Shannon.H = mean(Shannon_H), M_P.even = mean(Pielou_evenness),                        M_Rar.even = mean(Rarefied_evenness), M_Simpson.I = mean(Simpson_index)) 
 
-TBI_variables<-left_join(TBI_variables, mean.Micro.diversity, by= c("site" = "Site"))
+TBI_variables<-left_join(TBI_variables, microbial_data, by= c("site" = "Site"))
 
 
 ##rounding of numeric data on 2 decimals
@@ -159,55 +155,20 @@ is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 3)
 
 # Remove unimportant and duplicate columns
-TBI_variables<- TBI_variables[ -c(7:10, 12:15, 22, 29:31, 46)]
+TBI_variables<- TBI_variables[ -c(1, 7:10, 12:15, 22, 28, 30:34, 50)]
 TBI_variables$year<- as.numeric(TBI_variables$year)
 
 #create new variable rain factor (RF), Lang et al 1976 Water and Plant Life. Springer: Berlin, Heidelberg, New York 
 #the ratio between mean precipitation and mean temperature, or RF = P · T−1
 
-TBI_variables$RF<- TBI_variables$gridPrec * (TBI_variables$gridTemp)^-1
-
 #change order of sites in dataframe
 TBI_variables$site <- factor(TBI_variables$site, levels = c("Fau","Vik","Arh","Ovs","Alr","Hog","Ram","Ves", "Ulv","Lav","Gud",                                                              "Skj"))
 
-#write.table(TBI_variables, file = "O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_variables.txt")
+#write.table(TBI_variables, file = "O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_variables.csv")
 
 #==============================================================================================================================
 
-# create AllVar for plotting
-AllVar <- c("S", "k", "gridTemp", "gridPrec", "Temp.Var", "Prec.Var", "pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "P_div", "P_even", "M_Richnes", "M_Shannon.H", "M_P.even" , "M_Rar.even" , "M_Simpson.I")
 
-MyVar <- c("gridTemp", "gridPrec", "Temp.Var", "AvailN", "Plant_comm", "Root", "soil_CN", "soil_moist", "Total", "P_div", "M_Shannon.H")
-
-# quick plots to look at relations between variables
-Mydotplot(TBI_variables[, MyVar]) 
-pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
-
-
-#==============================================================================================================================
-# calculate CV for GridTemp and GridPrec per site per year
-CV<- function (mean, sd){
-    (sd/mean)*100  }
-
-TBI_summary<-TBI_variables %>%
-              group_by(site, year)%>%
-              summarise(mean= mean(k), sd = sd(k), cv = CV(mean, sd))
-
-TBI.oav <- aov(sqrt.k ~ factor(year), data=TBI_variables)
-plot(TBI.oav)
-summary(TBI.oav)
-TukeyHSD(TBI.oav)
-
-
-# model TBI data with climate variables
-TBI.model<- lm(sqrt.k ~ gridTemp + gridPrec + factor(Temp.x) + factor(Prec.x) , data = TBI_variables)
-summary(TBI.model)
-plot(TBI.model)
-TBI_variables$Resid<- resid(TBI.model)
-
-
-# loop for plotting TBI.res against other variables 
-plotDF <- melt(TBI_variables[, c(3, 5, 17:49)], id= c ("Resid","Temp.x"), na.rm =TRUE)
 
 ggplot(plotDF, aes(x=value, y=Resid, col=Temp.x)) + 
   geom_point(shape= 1)+      
@@ -221,9 +182,7 @@ ggplot(plotDF, aes(x=value, y=Resid, col=Temp.x)) +
 
 
 
-MyVar <- c("pH", "NO3N", "NH4N", "Plant_comm", "Root", "soil_CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Total", "rich", "div" , "residuals")
-Mydotplot(TBI_variables[, MyVar]) 
-pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
+
 
 
 ## first run TBI_climate.R to get TBI.meanTemp!!!
@@ -461,27 +420,5 @@ ggplot(TBI1415, aes(factor(Temp), k, col=factor(Year)))+
   theme(legend.text= element_text(size= rel(1.5), colour = "black"))+
   theme(legend.position = c(.9, .8))
 
-ggplot(TBI1415, aes(factor(Prec), k, col=factor(Year)))+
-  geom_boxplot()
-
-TBI2014<- subset(TBI1415, Year== "2014")
-TBI2015<- subset(TBI1415, Year== "2015")
-
- 
-ggplot(TBI2014, aes(factor(Temp), k, col=factor(Prec)))+
-  geom_boxplot()+
-  labs(title= "2014", x= "Temperature[?C]", y = "Decomposition rate [k]", col="Precipitation")
-  
-ggplot(TBI2015, aes(factor(Temp), k, col=factor(Prec)))+
-  geom_boxplot()
-  labs(title= "2015", x= "Temperature[?C]", y = "Decomposition rate [k]", col="Precipitation")
-
-ggplot(TBI2014, aes(factor(Prec), k, col=factor(Temp)))+
-  geom_boxplot()
-  labs(title= "2014", x= "Precipitation", y = "Decomposition rate [k]", col="Temperature[?C]")
-
-ggplot(TBI2015, aes(factor(Prec), k, col=factor(Temp)))+
-  geom_boxplot()
-  labs(title= "2015", x= "Precipitation", y = "Decomposition rate [k]", col="Temperature[?C]")
 
 
