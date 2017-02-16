@@ -1,7 +1,7 @@
 # TBI data
 # First run TBI_ibutton for getting Modelled Temperature 
 
-source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
+
 library(readxl) #require packages
 library(ggplot2)
 library(graphics)
@@ -32,6 +32,10 @@ TBI$decomp.R<- 1-TBI$Wt
 # load climate daily climate data! 
 load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedDailyClimateData2009-2016.RData")
 
+# function for calculation coefficient of variance
+CV<- function (mean, sd){
+  (sd/mean)*100  }
+
 # Function to lookup climate date from recovery and burial dates in the TBI data
 TBI.climateLookup <- function(TBI, climate) {
   # Function to find the 'colName' climate between the burial and recovery dates in the climate data frame
@@ -41,12 +45,13 @@ TBI.climateLookup <- function(TBI, climate) {
   }
   
   # Find the temperature data and apply the mean and variance function to it
-  tempData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = mean, na.rm = TRUE)
+  tempMean <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = mean, na.rm = TRUE)
   tempVar <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Temperature", apFunc = var, na.rm = TRUE)
   
   # Find the precipitation data and apply the sum and variance function to it
-  precipData <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sum, na.rm = TRUE)
-    precipVar <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = var, na.rm = TRUE)
+ precipTotal <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sum, na.rm = TRUE)
+  precipMean <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = mean , na.rm = TRUE)
+  precipSd <- apply(X = as.matrix(cbind(as.character(TBI$BurialDate), as.character(TBI$RecoveryDate), as.character(TBI$site))), FUN = climLookup, MARGIN = 1, climate = climate, colName = "Precipitation", apFunc = sd , na.rm = TRUE)
   
   
   
@@ -54,10 +59,10 @@ TBI.climateLookup <- function(TBI, climate) {
   cbind(
     TBI,
     data.frame(
-      gridTemp = tempData,
+      gridTemp = tempMean,
       Temp.Var = tempVar,
-      gridPrec = precipData,
-      Prec.Var = precipVar
+      gridPrec = precipTotal,
+      Prec.CV = precipMean/precipSd*100
     )
   )
 }
