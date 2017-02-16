@@ -131,19 +131,10 @@ all_TEMP <- left_join(all_TEMP, grid_sT, by= c("Site" = "Site", "Date" = "date")
 modelclimate <- all_TEMP %>%
                 group_by(Site) %>%
                 mutate( new_T = (Temperature.x - mean(Temperature.x)) * sd(Temperature.y, na.rm =TRUE)/ sd(Temperature.x)+ mean                        (Temperature.x)+(mean(Temperature.y, na.rm =TRUE)-mean(Temperature.x)))%>%
-                filter( year >2013)
+                filter( Year >2013)
                 
 
 modelclimate$yday<- strptime(modelclimate$Date, "%Y-%m-%d")$yday+1
-
-ggplot(AllTemp, aes(yday, color = loggertype))+
-  geom_line(aes(y= Temperature.x, col= "Gridded met.no" ))+
-  geom_line(aes(y= Temperature.y, col= "Climatestation"))+
-  geom_line(aes(y= mn_sT, col= "Ibuttons"))+
-  geom_line(aes(y= new_T, col= "Remodelled"))+
-  facet_wrap(~Site, scales = "free_y")+
-  labs(x = "Julian days 2014-2016", y= "Temperature (C)")+
-  theme_bw()
 
 
 
@@ -192,30 +183,28 @@ AllTemp<-merge.all(dfs = tempList, by = c("Site",  "Date"))
 
 AllTemp<- cbind (AllTemp, Year = year(AllTemp$Date))
 
+x<-AllTemp %>%
+  group_by(Year, Site)%>%
+  summarise_each(funs(mean(., na.rm =TRUE)))
+
+
 #calculate means for different Temperature measurements Gridded, climate station, ibutton, modeled
 #mean_Temp<- AllTemp %>%
 #  group_by(Site, Year)%>%
 #  summarise_each(funs(mean(., na.rm =TRUE)))
 
 mean_Temp<-AllTemp %>%
-            group_by(Site, Year)%>%
+            group_by(Year, Site)%>%
             summarise(model_T = mean(new_T, na.rm =TRUE))
 
-#mean modelTemp for Skj 2014 is extremely high, replace it with gridded Temp value
-mean_Temp$model_T[25]= 10.08
-
+#mean modelTemp for Skj is systematically higher than other alpine sites, replace it with gridded Temp value
+mean_Temp$model_T[9]= 10.08
+mean_Temp$model_T[21]= 7.60
+mean_Temp$model_T[33]= 8.01
 
 
 mean_Temp$ID<- paste(mean_Temp$Site, mean_Temp$Year)
 
-ggplot(AllTemp, aes(Date, color = loggertype))+
-  geom_line(aes(y= Temperature.x, col= "Gridded" ))+
-  geom_line(aes(y= Temperature.y, col= "Station_sT"))+
-  geom_line(aes(y= mn_sT, col= "Ibutton"))+
-  geom_line(aes(y= new_T, col= "Zmodel"))+
-  facet_wrap(~Site, scales = "free_y")+
-  labs(x = "Dates", y= "Temperature (C)")+
-  theme_bw()
 
 
 
