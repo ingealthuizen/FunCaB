@@ -55,6 +55,7 @@ read.logger<-function(file){
   list(CO2=log[log$indicator==2, -1], PAR=log[log$indicator==1, -1], H2O=log[log$indicator==3, -1])
 }
 
+
 #load logger file and assign log.data to different parameters
 #log.data<-read.logger("CO2/Data/Fluxdata2016_Li1400/20160607_FAU_LI1400_CH1_1.txt")
 #CO2<-log.data$CO2
@@ -69,6 +70,7 @@ read.logger<-function(file){
 read.metadata<-function(file){
   metdat<-read.table(file, header=TRUE, fill=TRUE, stringsAsFactors = FALSE)
   names(metdat)<-c("date", "starttime", "stoptime", "chamber", "site", "block", "treatment", "cover", "airpress", "vegbiomass", "flag", "removal")
+  metdat<- metdat[-c(13)]
   metdat$starttime<- as.POSIXct(paste(metdat$date, metdat$starttime), tz="", format="%d.%m.%Y %H:%M:%S")
   metdat$stoptime<- as.POSIXct(paste(metdat$date, metdat$stoptime), tz="", format="%d.%m.%Y %H:%M:%S")
   #metdat$date<-NULL
@@ -86,6 +88,7 @@ process.data <- function(meta, logger, temp){
     
     metdat<-meta[i,]    
     if(!is.na(metdat$flag)&metdat$flag=="x" )return(NULL) # leave out measurements that are flagged "x"
+    
     #linking start/stoptime from metadata to CO2, PAR and H2O data from logger  
     startCO2<-which(logger$CO2$datetime==metdat$starttime)#or next
     if(length(startCO2)==0){
@@ -104,6 +107,15 @@ process.data <- function(meta, logger, temp){
     co2 <- logger$CO2[startCO2:stopCO2, ]
     co2$time <- unclass(co2$datetime - co2$datetime[1])
     co2 <- rename(co2, CO2 = value)
+
+    # plot co2 against time and fit a loess trough data to identify outliers
+    #co2.fit<- with(co2, scatter.smooth(time, CO2))
+    #resid <- resid(co2.fit)
+    #fitted <- fitted(co2.fit)
+     
+    #plot(fitted, resid)
+    #abline(h = 0, col= 8)
+    
     
     startpar<-which(logger$PAR$datetime==metdat$starttime)#or next
     if(length(startpar)==0){
@@ -153,6 +165,7 @@ process.data <- function(meta, logger, temp){
   cleaner[!vapply(cleaner, is.null, FUN.VALUE = TRUE)]    
 }  
 
+
 #specifying data used in function process.data
 #plotme == TRUE will create plots for every measurement specified in proces.data by start and stoptime in meta.data
 #combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
@@ -163,6 +176,8 @@ process.data <- function(meta, logger, temp){
 setStartEnd <- function(x){
       startHappy <- FALSE 
       endHappy <- FALSE
+      tstart <- 0 #default is 0, otherwise give other starttime
+      tfinish <- Inf
       while(!(startHappy & endHappy)){
         layout(matrix(c(1,1,1,2,2,2,2,2,2), nrow = 3, ncol = 3, byrow = TRUE)) #plot PAR and CO2 in for measurement
         par(mar=c(4,5,2,2))
@@ -170,24 +185,22 @@ setStartEnd <- function(x){
         plot.CO2(x)
       
         
-        
-        tstart <- readline("Enter preferred start time for fitting. \n Round to nearest integer second. press 'return':")
-        if(!grepl("^[0-9]+$", tstart)){
-          tstart <- 0 #default is 0, otherwise give other starttime
+        tstart1 <- readline("Enter preferred start time for fitting. \n Round to nearest integer second. press 'return':")
+        if(!grepl("^[0-9]+$", tstart1)){
+          
           startHappy <- TRUE
         } else {
-          tstart <- as.integer(tstart)
+          tstart <- as.integer(tstart1)
           startHappy <- FALSE
         }
         
         
-        
-        tfinish <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preferred, press 'return':")
-        if(!grepl("^[0-9]+$", tfinish)){
-          tfinish <- Inf
+        tfinish1 <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preferred, press 'return':")
+        if(!grepl("^[0-9]+$", tfinish1)){
+          
           endHappy <- TRUE
         } else{
-          tfinish <- as.integer(tfinish)
+          tfinish <- as.integer(tfinish1)
           endHappy <- FALSE
         }
         x$dat$keep[x$dat$time < tstart | x$dat$time > tfinish] <- FALSE
