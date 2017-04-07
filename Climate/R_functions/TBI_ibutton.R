@@ -183,9 +183,9 @@ AllTemp<-merge.all(dfs = tempList, by = c("Site",  "Date"))
 
 AllTemp<- cbind (AllTemp, Year = year(AllTemp$Date))
 
-x<-AllTemp %>%
-  group_by(Year, Site)%>%
-  summarise_each(funs(mean(., na.rm =TRUE)))
+#x<-AllTemp %>%
+#  group_by(Year, Site)%>%
+#  summarise_each(funs(mean(., na.rm =TRUE)))
 
 
 #calculate means for different Temperature measurements Gridded, climate station, ibutton, modeled
@@ -198,9 +198,9 @@ mean_Temp<-AllTemp %>%
             summarise(model_T = mean(new_T, na.rm =TRUE))
 
 #mean modelTemp for Skj is systematically higher than other alpine sites, replace it with gridded Temp value
-mean_Temp$model_T[9]= 10.08
-mean_Temp$model_T[21]= 7.60
-mean_Temp$model_T[33]= 8.01
+mean_Temp$model_T[9]= 10.08 # Skj 2014
+mean_Temp$model_T[21]= 7.60 # Skj 2015
+mean_Temp$model_T[33]= 8.01 # SKj 2016
 
 
 mean_Temp$ID<- paste(mean_Temp$Site, mean_Temp$Year)
@@ -231,9 +231,10 @@ TBI.climateLookup <- function(TBI_time, climate) {
     outMat
   }
   # Apply the climate retrieval function to each site and compress into one giant data frame
-  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Precipitation"))
+  PrecData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Precipitation"))
   
-  tempData
+  PrecData
+  
 }
 
 Gridded.Prec <-TBI.climateLookup(TBI_times, climate) # change colName to Precipitation
@@ -245,7 +246,7 @@ Gridded.Prec$yday<- strptime(Gridded.Prec$Date, "%Y-%m-%d")$yday+1
 
 Total.Prec<- Gridded.Prec %>%
               group_by(year, Site) %>%
-              summarise( total.Prec = sum(Precipitation) )
+              summarise( total.Prec = sum(Precipitation))
 Total.Prec$Site <- factor(Total.Prec$Site, levels = c("Fau","Vik","Arh","Ovs","Alr","Hog","Ram","Ves", "Ulv","Lav","Gud", "Skj"))
 
 ggplot(Total.Prec, aes(Site, total.Prec, col = year))+
