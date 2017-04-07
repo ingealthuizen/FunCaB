@@ -180,10 +180,10 @@ merge.all<- function (dfs, by){
 }
   
 AllTemp<-merge.all(dfs = tempList, by = c("Site",  "Date"))
-
+AllTemp$Site<-as.factor(AllTemp$Site)
 AllTemp<- cbind (AllTemp, Year = year(AllTemp$Date))
 
-#x<-AllTemp %>%
+#AllTemp %>%
 #  group_by(Year, Site)%>%
 #  summarise_each(funs(mean(., na.rm =TRUE)))
 
@@ -192,6 +192,7 @@ AllTemp<- cbind (AllTemp, Year = year(AllTemp$Date))
 #mean_Temp<- AllTemp %>%
 #  group_by(Site, Year)%>%
 #  summarise_each(funs(mean(., na.rm =TRUE)))
+
 
 mean_Temp<-AllTemp %>%
             group_by(Year, Site)%>%
@@ -205,7 +206,18 @@ mean_Temp$model_T[33]= 8.01 # SKj 2016
 
 mean_Temp$ID<- paste(mean_Temp$Site, mean_Temp$Year)
 
+#correlation between modelled soilTemp and measured soilTemp from climate station and ibuttons per site, excluding NA
+modelclimate2014<-modelclimate %>%
+                  filter(Year == 2014)
 
+#correlation between Ibutton and climatestation
+plyr::ddply(modelclimate2014, ~Site, summarize,
+               climsation = cor(Temperature.y, mn_sT, use= "pairwise.complete.obs", method = "pearson"),
+            ibut = cor(Temperature.x, mn_sT, use= "pairwise.complete.obs", method = "pearson"))
+
+z<-plyr::ddply(modelclimate, ~Site, summarize,
+      climsTation = cor(Temperature.y, new_T, use= "complete.obs", method = "pearson"),
+      ibutton = cor(mn_sT, new_T, use= "complete.obs", method = "pearson"))
 
 
 #=================================================Precipitation======================================================================
