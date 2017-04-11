@@ -1,5 +1,21 @@
 # TBI plots 
 
+#change names of Temperature and precipitation levels
+levels(TBI_variables$Temp.x) <- c("Alp", "Sub", "Bor")
+levels(TBI_variables$Prec.x) <- c("Prec1", "Prec2", "Prec3", "Prec4")
+
+TBI_variables2<- TBI_variables
+levels(TBI_variables2$Prec.x) <- c("All","All","All","All" )
+levels(TBI_variables2$Temp.x) <- c("All","All","All")
+
+
+TBI_variables2x<-bind_rows(TBI_variables2, TBI_variables)
+TBI_variables2x$Temp.x_f<- factor(TBI_variables2x$Temp.x, levels= c("All","Alp", "Sub", "Bor"))
+
+#add 
+TBI_variables2<-TBI_variables%>%
+                mutate(allprec.x == "all")
+  
 #first run TBI_ibutton
 # TBI climate comparison
 ggplot(modelclimate, aes(Date, color = Data))+
@@ -47,10 +63,6 @@ ggplot(TBI_variables, aes(modelTemp, k, col= factor(Temp.x)))+
    theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
          legend.text=element_text(size=12))
 
-ggplot(TBI_variables, aes(modelTemp))+
-  geom_smooth(aes(y = k), method = "lm", size=2, se= FALSE)
-  geom_point(aes(y= k, shape= Temp.x, col= factor(year)), size= 5, width = 0.1)+
-  geom_smooth(aes(y= k, shape= Temp.x), method = "lm", se = FALSE)  
 
 # MANUSCRIPT PLOT1
 ggplot(TBI_variables, aes(modelTemp))+
@@ -59,7 +71,7 @@ ggplot(TBI_variables, aes(modelTemp))+
   geom_smooth(aes(y= k, col= factor(Temp.x)), method = "lm", size=1.5, se = FALSE)+
   #facet_wrap(~site)+
   labs(y= " Decomposition rate (k) ", x = "Temperature (°C)")+
-  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000", "#500000"),
+  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000", "#000000"),
                        name="elevation", 
                        breaks=c("1", "2", "3", "4"), 
                        labels = c("ALP", "SUB", "BOR", "ALL"))+
@@ -67,8 +79,10 @@ ggplot(TBI_variables, aes(modelTemp))+
                         name="year", 
                         breaks=c("2014", "2015", "2016"), 
                         labels = c("2014", "2015", "2016")) +
+  scale_x_continuous(breaks = c(7,8,9,10,11,12,13))+
   theme_classic()+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
 
 ggplot(TBI_variables, aes(modelTemp))+
   geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
@@ -87,7 +101,24 @@ ggplot(TBI_variables, aes(modelTemp))+
   theme_classic()+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
+ggplot(TBI_variables, aes(modelTemp))+
+  geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
+  geom_point(aes(y= k, col= factor(Prec.x) , shape = factor(year)), size= 5, width = 0.1)+
+  geom_smooth(aes(y= k, col= factor(Prec.x)), method = "lm", size=1.5, se = FALSE)+
+  #facet_wrap(~site)+
+  labs(y= " Decomposition rate (k) ", x = "Temperature (°C)")+
+  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000","#CC9900", "#500000"),
+                     name="wetness", 
+                     breaks=c("1", "2", "3", "4", "5"), 
+                     labels = c("+DRY", "DRY", "WET", "+WET", "ALL"))+
+  scale_shape_manual(values = c(1, 5, 8),
+                     name="year", 
+                     breaks=c("2014", "2015", "2016"), 
+                     labels = c("2014", "2015", "2016")) +
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
+#Edit x-axis
 #Relation with Precipitation for 
 ggplot(TBI_variables, aes(gridPrec))+
   geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
@@ -95,16 +126,36 @@ ggplot(TBI_variables, aes(gridPrec))+
   geom_smooth(aes(y= k, col= factor(Prec.x)), method = "lm", size=1.5, se = FALSE)+
   #facet_wrap(~site)+
   labs(y= " Decomposition rate (k) ", x = "Precipitation (mm)")+
-  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000", "#500000", "#CC3300" ),
-                     name="elevation", 
+  scale_color_manual(values =c( "#CC0000","#FF9900", "#3399FF","#000099", "#000000" ),
+                     name="Precipitation level", 
                      breaks=c("1", "2", "3", "4"), 
                      labels = c("+Dry", "Dry", "Wet", "+Wet"))+
   scale_shape_manual(values = c(1, 5, 8),
                      name="year", 
                      breaks=c("2014", "2015", "2016"), 
                      labels = c("2014", "2015", "2016")) +
+  scale_x_continuous(breaks = c(100,200,300,400,500,600,700,800,900))+
   theme_classic()+
-  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+  theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 18), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = c(.9,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
+
+ggplot(TBI_variables, aes(gridPrec))+
+  geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
+  geom_point(aes(y= k, col= factor(Temp.x) , shape = factor(year)), size= 5, width = 0.1)+
+  geom_smooth(aes(y= k, col= factor(Temp.x)), method = "lm", size=1.5, se = FALSE)+
+  #facet_wrap(~site)+
+  labs(y= " Decomposition rate (k) ", x = "Precipitation (mm)")+
+  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000", "#500000" ),
+                     name="Precipitation level", 
+                     breaks=c("1", "2", "3", "4"), 
+                     labels = c("ALP", "SUB", "BOR", "ALL"))+
+  scale_shape_manual(values = c(1, 5, 8),
+                     name="year", 
+                     breaks=c("2014", "2015", "2016"), 
+                     labels = c("2014", "2015", "2016")) +
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 18), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = c(.9,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
 
 
 ggplot(TBI_variables)+
@@ -124,7 +175,7 @@ ggplot(TBI_variables, aes(modelTemp))+
   geom_smooth(aes(y= k, col= factor(year)), method = "lm", se = FALSE)+
     #facet_wrap(~site)+
   labs(y= "Decomposition rate (k)", x = "Temperature (°C)")+
-  scale_color_discrete(name= "elevation", labels = c("2014", "2015", "2016"))+
+  scale_color_discrete(name= "year", labels = c("2014", "2015", "2016"))+
   scale_shape_discrete(solid = FALSE, guide = FALSE)+
   theme_classic()+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.9), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
@@ -132,18 +183,7 @@ ggplot(TBI_variables, aes(modelTemp))+
 
 
 # gridPrec
-ggplot(TBI_variables, aes(gridPrec, k, col= factor(Prec.x)))+
-  geom_point(aes(shape = factor(year)), size= 3, na.rm = FALSE)+
-  geom_smooth(method = "lm", se = FALSE)+
-  #facet_grid(~year)+
-  labs(y= "Decomposition rate (k)", x = "Total precipitation (mm)")+
-  scale_color_discrete(name= "Precipitation level", labels = c("+dry", "dry", "wet", "+wet"))+
-  scale_shape_discrete(solid = FALSE, guide= FALSE)+
-  theme_classic()+
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
-        legend.text=element_text(size=12))
-
-ggplot(TBI_variables, aes(gridPrec))+
+gglot(TBI_variables, aes(gridPrec))+
   geom_point(aes( y= k))+
   geom_smooth(aes(y = k, col = "yellow"), method = "lm", size= 2, se= FALSE)+
   geom_point(aes(y= k, col= factor(Prec.x) ,shape = factor(year)), size= 5, width = 0.1)+
@@ -151,6 +191,18 @@ ggplot(TBI_variables, aes(gridPrec))+
   #facet_wrap(~site)+
   labs(y= "Decomposition rate (k)", x = "Temperature (°C)")+
   scale_color_discrete(name= "elevation", labels = c("+dry", "dry", "wet", "+wet","total"))+
+  scale_shape_discrete(solid = FALSE, guide = FALSE)+
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.9), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
+gglot(TBI_variables, aes(gridPrec))+
+  geom_point(aes( y= k))+
+  geom_smooth(aes(y = k, col = "yellow"), method = "lm", size= 2, se= FALSE)+
+  geom_point(aes(y= k, col= factor(Temp.x) ,shape = factor(year)), size= 5, width = 0.1)+
+  geom_smooth(aes(y= k, col= factor(Temp.x)) ,method = "lm", se = FALSE, size = 1)+
+  #facet_wrap(~site)+
+  labs(y= "Decomposition rate (k)", x = "Temperature (°C)")+
+  scale_color_discrete(name= "elevation", labels = c("ALP", "SUB", "BOR", "ALL"))+
   scale_shape_discrete(solid = FALSE, guide = FALSE)+
   theme_classic()+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.9), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
@@ -183,38 +235,6 @@ popo
   theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
         legend.text=element_text(size=12))
 
-# RainFactor (RF)
-ggplot(TBI_variables, aes(RF, k, col= Prec.x))+
-  geom_point(aes(shape = factor(Temp.x)), size= 3)+
-  geom_smooth(method = "lm")+
-  #facet_grid(~year)+
-  labs(y= "Decomposition rate (k)", x = "RF")+
-  scale_color_discrete(name= "precipitation", labels = c("alp", "sub", "bor"))+
-  scale_shape_discrete(solid = FALSE, guide= FALSE)+
-  theme_bw()+
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
-        legend.text=element_text(size=12))
-
-
-
-# difference in K across years
-ggplot(TBI_variables, aes(factor(year), k))+
-  geom_boxplot()+
-  theme_classic()+
-  labs(x= "Year", y = "Decomposition rate (k)")+
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15))
-
-
-ggplot(TBI_variables, aes(factor(year), k, col= Temp.x))+
-  geom_boxplot()+
-  #facet_wrap(~site)+
-  labs(y= "Decomposition rate (k)", x = "year")+
-  scale_color_discrete(name= "Elevation", labels = c("alp", "sub", "bor"))+
-  theme_bw()+
-  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
-        legend.text=element_text(size=12))
-
-
 
 ggplot(TBI_variables, aes(gridPrec, k))+
   geom_point(aes(shape = factor(Prec.x)), size= 3)+
@@ -228,22 +248,6 @@ ggplot(TBI_variables, aes(gridPrec, k))+
         legend.text=element_text(size=12))
   
 
-
-ggplot(TBI_variables, aes(modelTemp, Ag, col=Temp.x))+
-  geom_point()+
-  geom_smooth( method = "lm", se = FALSE)+
-  theme_classic()
-
-ggplot(TBI_variables, aes(modelTemp, decomp.R, col=Temp.x))+
-  geom_point()+
-  geom_smooth( method = "lm", se= FALSE)+
-  theme_classic()
-
-
-ggplot(TBI_variables, aes(site, Litter.CN))+
-  geom_point()
-
-
 # boxplots with comparing Decomp rate K, modelT and gridP at different elevations for different years
 #Boxplot for manuscript decomp K against elevation split with Precipition level
 ggplot(TBI_variables, aes(Prec.x, k, fill = factor(Prec.x)))+
@@ -254,16 +258,36 @@ ggplot(TBI_variables, aes(Prec.x, k, fill = factor(Prec.x)))+
   labs(x= "year", y = "Decomposition rate (k)")+
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(0.8,0.8), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
+#Supplementary data
 #Boxplot for manuscript decomp K against year split with Precipition level
-ggplot(TBI_variables, aes(year, k, fill = factor(year)))+
+ggplot(TBI_variables2x, aes(year, k, fill = factor(year)))+
+  stat_boxplot(geom ='errorbar', width = 0.4)+
   geom_boxplot()+
   theme_classic()+
   facet_grid(.~Prec.x, switch= "both")+
-  scale_fill_grey(start =0.4, end = 1.0, name= "elevation", labels = c("2014", "2015", "2016"))+
+  scale_fill_grey(start =0.4, end = 1.0, name= "year", labels = c("2014", "2015", "2016"))+
   labs(x= "year", y = "Decomposition rate (k)")+
-  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), legend.position = c(0.9,0.1), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), legend.position = c(0.9,0.9), legend.title = element_text(size= 22), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18), strip.background = element_blank())
+
+ggplot(TBI_variables2x, aes(year, k, fill = factor(year)))+
+  stat_boxplot(geom ='errorbar', width = 0.4)+
+  geom_boxplot()+
+  theme_classic()+
+  facet_grid(.~Temp.x_f, switch= "both")+
+  scale_fill_grey(start =0.4, end = 1.0, name= "year", labels = c("2014", "2015", "2016"))+
+  labs(x= "Year", y = "Decomposition rate (k)")+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), strip.text.x = element_text(size = 18) )
+
+ggplot(TBI_variables, aes(factor(year), k, fill = factor(year)))+
+  stat_boxplot(geom ='errorbar', width = 0.4)+
+  geom_boxplot()+
+  theme_classic()+
+    scale_fill_grey(start =0.4, end = 1.0, guide=FALSE)+
+  labs(x= "Year", y = "Decomposition rate (k)")+
+  theme(axis.title = element_text(size = 25),axis.ticks.x=element_blank(), axis.text = element_text(size = 18))
 
 ggplot(TBI_variables, aes(Temp.x, gridPrec, fill = factor(Temp.x)))+
+  stat_boxplot(geom ='errorbar',width = 0.4)+
   geom_boxplot()+
   theme_classic()+
   facet_grid(.~year, switch= "both")+
@@ -310,14 +334,25 @@ ggplot(TBI_variables, aes(Temp.x, fill = factor(Temp.x)))+
   labs(x= "year", y = "Decomposed tea (%)")+
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.9,.45), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
-
-
 ggplot(TBI_variables, aes(Prec.x, fill = factor(Prec.x)))+
   geom_boxplot(aes(y= decomp.R*100, col = "rooibos"))+
   geom_boxplot(aes(y= Ag*100, col = "green" ))+
   theme_classic()+
+  facet_grid(.~year, switch= "both")+
+  scale_fill_grey(start =0.4, end = 1.0, name= "Prec level", labels = c("+Dry", "Dry", "Wet", "+Wet"))+
+  scale_color_manual(values =c("#339900","#CC0000"),
+                     name="tea", 
+                     breaks=c("green", "rooibos"), 
+                     labels = c("green", "rooibos"), guide=FALSE)+
+  labs(x= "year", y = "Decomposed tea (%)")+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.9,.45), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
+ggplot(TBI_variables, aes(Temp.x, fill = factor(year)))+
+  geom_boxplot(aes(y= decomp.R*100, col = "rooibos"))+
+  geom_boxplot(aes(y= Ag*100, col = "green" ))+
+  theme_classic()+
   facet_grid(.~Temp.x, switch= "both")+
-  scale_fill_grey(start =0.4, end = 1.0, name= "elevation", labels = c("alpine", "sub-alpine", "boreal"))+
+  scale_fill_grey(start =0.4, end = 1.0, name= "elevation", labels = c("alpine", "sub-alpine", "boreal", "all"))+
   scale_color_manual(values =c("#339900","#CC0000"),
                      name="tea", 
                      breaks=c("green", "rooibos"), 
@@ -325,11 +360,11 @@ ggplot(TBI_variables, aes(Prec.x, fill = factor(Prec.x)))+
   labs(x= "year", y = "Decomposed tea (%)")+
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.9,.45), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
-ggplot(TBI_variables, aes(Prec.x, fill = factor(year)))+
+ggplot(TBI_variables, aes(Prec.x, fill = factor(Prec.x)))+
   geom_boxplot(aes(y= decomp.R*100, col = "rooibos"))+
   geom_boxplot(aes(y= Ag*100, col = "green" ))+
   theme_classic()+
-  #facet_grid(.~Temp.x, switch= "both")+
+  facet_grid(.~Temp.x, switch= "both")+
   scale_fill_grey(start =0.4, end = 1.0, name= "elevation", labels =c("+dry", "dry", "wet", "+wet"))+
   scale_color_manual(values =c("#339900","#CC0000"),
                      name="tea", 
@@ -347,6 +382,43 @@ ggplot(TBI_variables, aes(modelTemp))+
   facet_grid(.~year)+
   labs(x= "Temperature", y = "Decomposed tea (%)")+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.9,.5), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
+########Figure for manuscript!!!!
+ggplot(TBI_variables, aes(modelTemp))+
+  geom_point(aes(y= decomp.R*100, shape= "Rooibos"), size=3)+
+  geom_point(aes(y= Ag*100, shape= "Green"), size=3)+
+  geom_smooth(aes( y =decomp.R*100 ,  linetype= "Rooibos"), method = "lm", se=FALSE)+
+  geom_smooth(aes( y =Ag*100,  linetype = "Green"), method = "lm", se=FALSE)+
+  facet_grid(~year)+
+  theme_classic()+
+  labs(y= " Decomposed tea (%) ", x = "Temperature (°C)")+
+  scale_shape_manual(values = c(1, 19), 
+                     name="Tea", 
+                     breaks=c("Rooibos", "Green"), 
+                     labels = c("Rooibos", "Green")) +
+  scale_linetype_manual(values = c("solid", "dotdash"), 
+                        name="Tea", 
+                        breaks=c("Rooibos", "Green"), 
+                        labels = c("Rooibos", "Green"))+
+  theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 18), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = c(.1,.9),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+
+ggplot(TBI_variables, aes(gridPrec))+
+  geom_point(aes(y= decomp.R*100, shape= "Rooibos"), size=3)+
+  geom_point(aes(y= Ag*100, shape= "Green"), size=3)+
+  geom_smooth(aes( y =decomp.R*100 ,  linetype= "Rooibos"), method = "lm", se=FALSE)+
+  geom_smooth(aes( y =Ag*100,  linetype = "Green"), method = "lm", se=FALSE)+
+  facet_grid(~year)+
+  theme_classic()+
+  labs(y= " Decomposed tea (%) ", x = "Precipitation (mm)")+
+  scale_shape_manual(values = c(1, 19), 
+                     name="Tea", 
+                     breaks=c("Rooibos", "Green"), 
+                     labels = c("Rooibos", "Green")) +
+  scale_linetype_manual(values = c("solid", "dotdash"), 
+                        name="Tea", 
+                        breaks=c("Rooibos", "Green"), 
+                        labels = c("Rooibos", "Green"))+
+  theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 18), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = c(.1,.9),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
 ggplot(TBI_variables, aes(modelTemp, group = factor(Prec.x)))+
   geom_point(aes(y= decomp.R*100, col =factor(Temp.x), size = 5))+
@@ -386,7 +458,7 @@ ggplot(TBI_variables, aes(gridPrec))+
                      labels = c("green", "rooibos"))+
   theme_classic()+
   facet_grid(.~year)+
-  labs(x= "Temperature", y = "Decomposed tea (%)")+
+  labs(x= "Temperature (°C)", y = "Decomposed tea (%)")+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.9,.5), legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
 
@@ -456,7 +528,6 @@ ggplot(Total.Prec, aes(site, gridPrec, fill = factor(year)))+
   scale_fill_grey(start= 0.3, end = 0.9, name= "Year", labels = c("2014", "2015", "2016"))+
   theme_classic()
 #labels= c("Fau", "Alr", "Ulv", "Vik", "Hog", "Lav", "Arh", "Ram", "Gud", "Ovs", "Ves", "Skj"))+
-
 
 
 # differences between elevations
