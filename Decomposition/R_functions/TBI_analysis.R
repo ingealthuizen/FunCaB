@@ -13,13 +13,29 @@ source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 
 # possible outlier Vik k= 0.26 ,| TBI_variables$k>0.025
 
-# remove outliers (8 measurements) / cut of at 0.20 (10 measurements)
-TBI_variables<-TBI_variables[!(TBI_variables$S>0.6 |TBI_variables$S<0 |TBI_variables$k<=0 | TBI_variables$k>0.025),]
-
+# remove outliers (10 measurements) / cut off at 0.20 (10 measurements)
+TBI_variables<-TBI_variables[!(TBI_variables$S>0.6 |TBI_variables$S<0 |TBI_variables$k<=0 | TBI_variables$k>0.020),]
 
 
 #remove rows with NA for k
 TBI_variables<-TBI_variables[!is.na(TBI_variables$k),]
+
+
+# create subsets for different years of decompostion data
+TBI_2014<- TBI_variables[(TBI_variables$year == 2014),]
+TBI_2015<- TBI_variables[(TBI_variables$year == 2015),]
+TBI_2016<- TBI_variables[(TBI_variables$year == 2016),]
+
+# create subsets for different altitudes of decompostion data
+TBI_ALP<- TBI_variables[(TBI_variables$Temp.x == "1"),]
+TBI_SUB<- TBI_variables[(TBI_variables$Temp.x == "2"),]
+TBI_BOR<- TBI_variables[(TBI_variables$Temp.x == "3"),]
+
+# create subsets for different Precipitation levels of decompostion data
+TBI_P1<- TBI_variables[(TBI_variables$Prec.x == "1"),]
+TBI_P2<- TBI_variables[(TBI_variables$Prec.x == "2"),]
+TBI_P3<- TBI_variables[(TBI_variables$Prec.x == "3"),]
+TBI_P4<- TBI_variables[(TBI_variables$Prec.x == "4"),]
 
 
 # create myVar for plotting with all variables
@@ -37,7 +53,7 @@ pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 boxplot(modelTemp ~ factor(Temp.x), 
         data = TBI_variables)
 
-boxplot(logPrec ~ factor(Prec.x), 
+boxplot(gridPrec ~ factor(Prec.x), 
         data = TBI_variables)
 
 boxplot(modelTemp ~ factor(year), 
@@ -92,18 +108,23 @@ ggplot(x, aes(mean.P, mean.k, col = factor(templevel)))+
   geom_point()+
   geom_smooth( method = "lm")
 
+TBI_grid<- TBI_variables%>%
+            group_by(site, year) %>%
+            summarise(m.T = mean(modelTemp), m.P = mean(gridPrec))
 
 # ANOVA 
-aov.T<- aov(modelTemp ~ factor(year), data=TBI_variables)
+aov.T<- aov(m.T ~ factor(year), data=TBI_grid)
 plot(aov.T)
 summary(aov.T)
 TukeyHSD(aov.T)
 
-aov.P<- aov(gridPrec ~ factor(year), data=TBI_variables)
+aov.P<- aov(m.P ~ factor(year), data=TBI_grid)
 plot(aov.P)
 summary(aov.P)
 TukeyHSD(aov.P)
 
+ggplot(TBI_grid, aes(factor(year), m.P))+
+  geom_boxplot()
 
 aov.k <- aov(k ~ factor(year), data=TBI_variables)
 plot(aov.k)
@@ -111,79 +132,132 @@ summary(aov.k)
 TukeyHSD(aov.k)
 # significant different k for years
 
+aov.2014T<- aov(k ~ factor(Temp.x), data=TBI_2016)
+plot(aov.2014T)
+summary(aov.2014T)
+TukeyHSD(aov.2014T)
+
+aov.2014P<- aov(k ~ factor(Prec.x), data=TBI_2016)
+plot(aov.2014P)
+summary(aov.2014P)
+TukeyHSD(aov.2014P)
+
 aov.Tea <- aov(k ~ Ag + decomp.R, data=TBI_variables)
 plot(aov.k)
 summary(aov.k)
 TukeyHSD(aov.k)
 
+#correlation between temp and decomposition rate k for different elevations
+cor.test(TBI_ALP$modelTemp, TBI_ALP$k) #positive sign correlation
+cor.test(TBI_SUB$modelTemp, TBI_SUB$k) #positive sign correlation
+cor.test(TBI_BOR$modelTemp, TBI_BOR$k) #positive sign correlation
+
+#correlation between Prec and decomposition rate k for different precipitation levels
+cor.test(TBI_P3$gridPrec, TBI_P3$k) #negative sign correlation
+cor.test(TBI_variables$gridPrec, TBI_variables$k) #negative sign correlation
 
 
-#Multilinear Model
+cor.test(TBI_P4$modelTemp, TBI_P4$k) # positive sign correlation
+
+ggplot(TBI_variables, aes(modelTemp, k, col= factor(Prec.x)))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+#############################Multilinear Model########################################################################################
+
+#Complete data set
 #Full model with all temperature and Precipitation terms
 M1 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x) * factor(Prec.x) , data = TBI_variables) #+ soil_moist + pH
 summary(M1) # you cannot make up which parameters should be kept in the model
 drop1(M1, test = "F")
 step(M1)
 
-# Reduced model, dropping terms with collinearity
-M1A<- lm( k ~ modelTemp + gridPrec + Temp.Var + Prec.CV + factor(year),  data = TBI_variables)
-summary(M1A)
-drop1(M1A, test = "F")
-step(M1A)
-
-
-M1B<- lm( k ~ modelTemp + gridPrec + Temp.Var + Prec.CV + factor(Temp.x), data = TBI_variables)
-summary(M1B)
-drop1(M1B, test = "F")
-step(M1B)
-#interaction between year and temp.level
-
-M3 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x) , data = TBI_variables)
-summary(M3)
-drop1(M3, test = "F")
-step(M3)
-
-M4 <- lm( k ~ modelTemp + gridPrec + pH  , data = TBI_variables)
-summary(M4)
-drop1(M4, test = "F")
-step(M4)
-
-anova(M3,M1)
-
-
 ###Model validation
 # Check for homogeneity
-E3 <- resid(M3)
-F3 <- fitted(M3)
-plot(x = F3, 
-     y = E3,
+E1 <- resid(M1)
+F1 <- fitted(M1)
+plot(x = F1, 
+     y = E1,
      xlab = "Fitted values",
      ylab = "Residuals")
 abline(h = 0, v = 0, lty = 2)
 
 #Influential observations
 par(mfrow = c(1, 1))
-plot(cooks.distance(M3), type = "h", ylim = c(0, 1))
+plot(cooks.distance(M1), type = "h", ylim = c(0, 1))
 abline(h = 1)
 
 #Normality
-E3 <- resid(M3)
-hist(E3, breaks = 15)
+E1 <- resid(M1)
+hist(E1, breaks = 15)
+#right skew of residuals 
 
 #"Independence"
 #Plot residuals vs each covariate in the model
 #Plot residuals vs each covariate not in the model
 
-TBI_variables$E3 <- E3   #Put E2 inside the Birds object (which will give trouble if there are NAs)
+TBI_variables$E1 <- E1   #Put E2 inside the Birds object (which will give trouble if there are NAs)
 MySel <- c("Prec.CV",  "AvailN", "Plant_CN", "soil_CN", "Litter.CN", "Root", "Bryo", "Forbs", "Gram","Total", "P_div", "M_Shannon.H")
 
-Myxyplot(TBI_variables, MySel, "E3", MyYlab = "Residuals")
+Myxyplot(TBI_variables, MySel, "E1", MyYlab = "Residuals")
 # relation with plant diversity?
 
-boxplot(E3~ factor(Temp.x), data= TBI_variables)
-boxplot(E3~ factor(Prec.x), data= TBI_variables)
-boxplot(E3~ factor(year), data= TBI_variables)
+boxplot(E1~ factor(Temp.x), data= TBI_variables)
+boxplot(E1~ factor(Prec.x), data= TBI_variables)
+boxplot(E1~ factor(year), data= TBI_variables)
 # no further relations with categorical variables
+
+
+### Mean decomposition rates#######
+TBI_means<- TBI_variables%>%
+   group_by(year, site)%>%
+   summarise_each(funs(mean(., na.rm =TRUE)))
+
+#add columns with precipitation and temperature level
+tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_means$Temp.x<-tempV[TBI_means$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_means$Prec.x<-precL[TBI_means$site]
+
+# create myVar for plotting with all variables
+MyVar <- c("modelTemp", "gridPrec", "Temp.Var", "Prec.CV", "pH", "AvailN", "Plant_CN", "Root", "soil_CN", "Litter.CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "P_div", "M_Shannon.H")
+
+# Check for outliers
+Mydotplot(TBI_means[, MyVar]) 
+
+## Collinearity
+pairs(TBI_means[, MyVar], lower.panel = panel.cor)
+# collinearity for biomass terms, pH and Microbial_Shannon H /soil_CN
+
+## Relationships Y vs X
+# check for relationships
+MyVar <- c("k", "S", "modelTemp", "gridPrec", "Temp.Var", "Prec.CV", "pH", "AvailN", "Plant_CN", "Root", "soil_CN", "Litter.CN", "soil_moist", "Total", "P_div", "M_Shannon.H")
+
+pairs(TBI_means[, MyVar], lower.panel = panel.cor)
+
+####Full model on mean decomposition rates with all climatic variables
+M_m1<-lm( k ~ modelTemp + gridPrec + factor(Temp.x) * factor(Prec.x), data = TBI_means)
+summary(M_m1) # you cannot make up which parameters should be kept in the model
+drop1(M_m1, test = "F")
+step(M_m1) #adj R2 = 0.42, AIC=-472.65, p=0.012
+
+M_m2<- lm( k ~ modelTemp + gridPrec + pH + P.div, data = TBI_means) #+ soil_moist + pH
+summary(M_m2) # you cannot make up which parameters should be kept in the model
+drop1(M_m2, test = "F")
+step(M_m2)
+
+#model including factors that possibly explain decomposition rate
+M_m3<- lm(k ~ factor(Prec.x)+ soil_CN + pH + P_div + M_Shannon.H, data = TBI_means)
+summary(M_m3) # you cannot make up which parameters should be kept in the model
+drop1(M_m3, test = "F")
+step(M_m3) #adj R2 = 0.49, AIC=-215.43, p=0.07
+
+
+
 
 # relationship between k and reduced dataset with only 2015 and 2016
 TBI_variables1516<- filter(TBI_variables, year>2014)
@@ -251,6 +325,7 @@ TBI.oav <- aov(k ~ factor(year), data=TBI_variables)
 plot(TBI.oav)
 summary(TBI.oav)
 TukeyHSD(TBI.oav)
+hist(TBI_variables$k)
 
 TBI.oav <- aov(k ~ modelTemp*Temp.x, data=TBI_variables)
 TBI.oav <- aov(k ~ gridPrec*Prec.x, data=TBI_variables)
