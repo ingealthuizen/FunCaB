@@ -148,9 +148,14 @@ summary(aov.k)
 TukeyHSD(aov.k)
 
 #correlation between temp and decomposition rate k for different elevations
-cor.test(TBI_ALP$modelTemp, TBI_ALP$k) #positive sign correlation
-cor.test(TBI_SUB$modelTemp, TBI_SUB$k) #positive sign correlation
-cor.test(TBI_BOR$modelTemp, TBI_BOR$k) #positive sign correlation
+cor.test(TBI_ALP$modelTemp, TBI_ALP$k) #positive sign. correlation
+cor.test(TBI_SUB$modelTemp, TBI_SUB$k) #positive sign. correlation
+cor.test(TBI_BOR$modelTemp, TBI_BOR$k) #positive sign. correlation
+
+#correlation between Prec and decomposition rate k for different elevations
+cor.test(TBI_ALP$gridPrec, TBI_ALP$k) #negative sign. correlation
+cor.test(TBI_SUB$gridPrec, TBI_SUB$k) #positive sign. correlation
+cor.test(TBI_BOR$gridPrec, TBI_BOR$k) #positive sign. correlation
 
 #correlation between Prec and decomposition rate k for different precipitation levels
 cor.test(TBI_P3$gridPrec, TBI_P3$k) #negative sign correlation
