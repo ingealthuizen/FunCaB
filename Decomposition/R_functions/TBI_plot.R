@@ -20,14 +20,22 @@ TBI_variables2<-TBI_variables%>%
                 mutate(allprec.x == "all")
   
 #first run TBI_ibutton
+
+#change names of sites for manuscript
+modelclimate$Site <- as.factor(modelclimate$Site)
+levels(modelclimate$Site) <- c("Sub1", "Bor3", "Bor1", "Alp3", "Sub2", "Alp2", "Bor4", "Sub3", "Alp4", "Alp1", "Sub4", "Bor2")
+modelclimate$Site_f = factor(modelclimate$Site, levels= c("Alp1","Alp2","Alp3","Alp4","Sub1","Sub2","Sub3","Sub4","Bor1","Bor2","Bor3", "Bor4"))
+
 # TBI climate comparison
 ggplot(modelclimate, aes(Date, color = Data))+
-  #geom_line(aes(y= Temperature.x, col= "Met.no" ))+
+  geom_line(aes(y= Temperature.x, col= "Met.no" ))+
   geom_line(aes(y= Temperature.y, col= "Climatestation"))+
   geom_line(aes(y= mn_sT, col= "Ibuttons"))+
-  #geom_line(aes(y= new_T, col= "Modelled"))+
-  facet_wrap(~Site, scales = "free_y")+
+  geom_line(aes(y= new_T, col= "Modelled"))+
+  facet_wrap(~Site_f, scales = "free_y")+
   labs(x = "Date", y= "Temperature (°C)")+
+  #scale_color_manual(values = c("#33CCFF", "#FF6666", "#33FF99", "#CC00FF"),
+  #                  name= "Temperature data")+
   theme_bw()+
   theme(axis.text = element_text(size = 10), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
         legend.text=element_text(size=12))
@@ -38,9 +46,10 @@ ggplot(AllTemp, aes(Date, color = loggertype))+
   geom_line(aes(y= mn_sT, col= "Ibutton"))+
   geom_line(aes(y= new_T, col= "Zmodel"))+
   facet_wrap(~Site, scales = "free_y")+
-  labs(x = "Dates", y= "Temperature (°C)")+
+  labs(x = "Date", y= "Temperature (°C)")+
   theme_bw()+
-
+  theme(axis.text = element_text(size = 10), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
+        legend.text=element_text(size=12))
 
 # first run TBI_ibutton, TBI_data and TBI_analysis
 
