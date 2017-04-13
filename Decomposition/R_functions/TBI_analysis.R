@@ -161,6 +161,29 @@ cor.test(TBI_BOR$gridPrec, TBI_BOR$k) #positive sign. correlation
 cor.test(TBI_P3$gridPrec, TBI_P3$k) #negative sign correlation
 cor.test(TBI_variables$gridPrec, TBI_variables$k) #negative sign correlation
 
+#correlation between Green tea with temp and prec for each year
+#Temp
+cor.test(TBI_2014$modelTemp, TBI_2014$Ag) # sign. cor 0.367
+cor.test(TBI_2015$modelTemp, TBI_2015$Ag) # sign. cor 0.511
+cor.test(TBI_2016$modelTemp, TBI_2016$Ag) # non-sign. cor -0.120
+
+#Prec
+cor.test(TBI_2014$gridPrec, TBI_2014$Ag) # non-sign. cor 0.152
+cor.test(TBI_2015$gridPrec, TBI_2015$Ag) # sign. cor 0.498
+cor.test(TBI_2016$gridPrec, TBI_2016$Ag) # non-sign. cor 0.366
+
+#correlation between Rooibos tea with temp and prec for each year
+cor.test(TBI_2014$modelTemp, TBI_2014$decomp.R) # non-sign. cor 0.126
+cor.test(TBI_2015$modelTemp, TBI_2015$decomp.R) # sign. cor 0.400
+cor.test(TBI_2016$modelTemp, TBI_2016$decomp.R) # non-sign. cor -0.167
+
+#Prec
+cor.test(TBI_2014$gridPrec, TBI_2014$decomp.R) # non-sign. cor 0.179
+cor.test(TBI_2015$gridPrec, TBI_2015$decomp.R) # sign. cor 0.0.239
+cor.test(TBI_2016$gridPrec, TBI_2016$decomp.R) # non-sign. cor 0.036
+
+
+
 
 cor.test(TBI_P4$modelTemp, TBI_P4$k) # positive sign correlation
 
