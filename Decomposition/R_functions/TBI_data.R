@@ -134,7 +134,7 @@ P.diversity_data$Year<- as.factor(P.diversity_data$Year)
 
 # calculate mean richness and diversity and add as variables to TBI_variables
 P.diversity_data<-P.diversity_data %>%
-                      group_by(site, Year) %>%
+                      group_by(site) %>%
                       summarise(P_div = mean(diversity, na.rm =TRUE), P_even = mean(evenness, na.rm =TRUE)) 
 
 
