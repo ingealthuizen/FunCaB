@@ -138,7 +138,7 @@ P.diversity_data<-P.diversity_data %>%
                       summarise(P_div = mean(diversity, na.rm =TRUE), P_even = mean(evenness, na.rm =TRUE)) 
 
 
-TBI_variables<-left_join(TBI_variables, P.diversity_data, by= c("site" = "site", "year" = "Year" ))
+TBI_variables<-left_join(TBI_variables, P.diversity_data, by= c("site" = "site"))
 
 # read in microbial data
 microbial_data<- read_excel("O:/FunCab/Data/FunCaB/Decomposition/Data/TBI/Microbialdiversity_turfs.xlsx")
