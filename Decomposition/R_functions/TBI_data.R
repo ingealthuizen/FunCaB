@@ -77,6 +77,10 @@ TBI$modelTemp<- mean_Temp$model_T[match(TBI$ID,mean_Temp$ID)]
 # add data from Serge 2010-2012 to dataframe
 site_variables<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
 
+#x<-site_variables%>%
+ # group_by(site)%>%
+  #summarise_each(funs(sd(., na.rm =TRUE))) 
+
 #calculate mean values for all variables per site excluding NA's
 site_variables<-site_variables %>%
                           group_by(site) %>%
@@ -131,6 +135,10 @@ P.diversity_data$site<-newnames[P.diversity_data$siteID]
 #Select diversity data from 2015 and 2016
 P.diversity_data<- subset(P.diversity_data, Year>=2014)
 P.diversity_data$Year<- as.factor(P.diversity_data$Year)
+
+#P.diversity_data %>%
+ # group_by(site) %>%
+ #summarise(sd=sd(diversity,na.rm=TRUE))
 
 # calculate mean richness and diversity and add as variables to TBI_variables
 P.diversity_data<-P.diversity_data %>%
