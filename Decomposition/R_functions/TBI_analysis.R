@@ -48,6 +48,8 @@ Mydotplot(TBI_variables[, MyVar])
 pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 # collinearity for biomass terms, pH and Shannon H
 
+#cor.test(TBI_means$pH, TBI_means$soil_CN)
+
 
 #conditional boxplot to check for collinearity between a continuous covariate and a categorical 
 boxplot(modelTemp ~ factor(Temp.x), 
@@ -61,6 +63,7 @@ boxplot(modelTemp ~ factor(year),
 
 boxplot(Temp.Var ~ factor(year), 
         data = TBI_variables)
+
 
 # collinearity between year and modeltemp en logPrec and Prec.x
 
@@ -147,56 +150,48 @@ plot(aov.k)
 summary(aov.k)
 TukeyHSD(aov.k)
 
-#correlation between temp and decomposition rate k for different elevations
-cor.test(TBI_ALP$modelTemp, TBI_ALP$k) #positive sign. correlation
-cor.test(TBI_SUB$modelTemp, TBI_SUB$k) #positive sign. correlation
-cor.test(TBI_BOR$modelTemp, TBI_BOR$k) #positive sign. correlation
+##### linear regression for Green and Rooibos tea for different years
+Ag_lm<-lm( decomp.R~ gridPrec, data= TBI_2016)
+summary(Ag_lm) 
+# Ag_T_2014 = 0.467 + 0.013 T, r2= 0.11, p<0.001
+# Ag_T_2015 = 0.302 + 0.035 T, r2= 0.26, p<0.001
+# Ag_T_2016 = 0.702 + -0.005 T, r2= 0.06, p=0.2
+# Rb_T_2014 = 0.215 + 0.003 T, r2= 0.01, p=0.19
+# Rb_T_2015 = 0.097 + 0.015 T, r2= 0.16, p<0.001
+# Rb_T_2016 = 0.301 + -0.005 T, r2= 0.03, p=0.08
 
-#correlation between Prec and decomposition rate k for different elevations
-cor.test(TBI_ALP$gridPrec, TBI_ALP$k) #negative sign. correlation
-cor.test(TBI_SUB$gridPrec, TBI_SUB$k) #positive sign. correlation
-cor.test(TBI_BOR$gridPrec, TBI_BOR$k) #positive sign. correlation
+# Ag_T_2014 = r2= 0.02, p=0.12
+# Ag_T_2015 = r2= 0.25, p<0.001
+# Ag_T_2016 = r2= 0.13, p<0.001
+# Rb_T_2014 = r2= 0.03, p=0.07
+# Rb_T_2015 = r2= 0.06, p<0.01
+# Rb_T_2016 = r2= 0.001, p=0.71
 
-#correlation between Prec and decomposition rate k for different precipitation levels
-cor.test(TBI_P3$gridPrec, TBI_P3$k) #negative sign correlation
-cor.test(TBI_variables$gridPrec, TBI_variables$k) #negative sign correlation
+# linear regression decomp rate k with temp
+k_lm<-lm( k~ modelTemp, data= TBI_BOR)
+summary(k_lm)
 
-#correlation between Green tea with temp and prec for each year
-#Temp
-cor.test(TBI_2014$modelTemp, TBI_2014$Ag) # sign. cor 0.367
-cor.test(TBI_2015$modelTemp, TBI_2015$Ag) # sign. cor 0.511
-cor.test(TBI_2016$modelTemp, TBI_2016$Ag) # non-sign. cor -0.120
+#TBI_ALP T r2= 0.06 p<0.05
+#TBI_SUB T r2= 0.04 p<0.05
+#TBI_BOR T r2= 0.05 p<0.01
 
-#Prec
-cor.test(TBI_2014$gridPrec, TBI_2014$Ag) # non-sign. cor 0.152
-cor.test(TBI_2015$gridPrec, TBI_2015$Ag) # sign. cor 0.498
-cor.test(TBI_2016$gridPrec, TBI_2016$Ag) # non-sign. cor 0.366
-
-#correlation between Rooibos tea with temp and prec for each year
-cor.test(TBI_2014$modelTemp, TBI_2014$decomp.R) # non-sign. cor 0.126
-cor.test(TBI_2015$modelTemp, TBI_2015$decomp.R) # sign. cor 0.400
-cor.test(TBI_2016$modelTemp, TBI_2016$decomp.R) # non-sign. cor -0.167
-
-#Prec
-cor.test(TBI_2014$gridPrec, TBI_2014$decomp.R) # non-sign. cor 0.179
-cor.test(TBI_2015$gridPrec, TBI_2015$decomp.R) # sign. cor 0.0.239
-cor.test(TBI_2016$gridPrec, TBI_2016$decomp.R) # non-sign. cor 0.036
-
-
-
-
-cor.test(TBI_P4$modelTemp, TBI_P4$k) # positive sign correlation
+#TBI_ALL P r2= 0.06 p<0.001
+#TBI_ALP P r2 =0.14 p<0.001
+#TBI_SUB P r2=0.10 p<0.001
+#TBI_BOR P r2= 0.04 p<0.05
 
 ggplot(TBI_variables, aes(modelTemp, k, col= factor(Prec.x)))+
   geom_point()+
   geom_smooth(method = "lm")
 
 #############################Multilinear Model########################################################################################
+Ag_lm<-lm( decomp.R~ gridPrec, data= TBI_2016)
+summary(Ag_lm)
 
 #Complete data set
 #Full model with all temperature and Precipitation terms
-M1 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x) * factor(Prec.x) , data = TBI_variables) #+ soil_moist + pH
-summary(M1) # you cannot make up which parameters should be kept in the model
+M1 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x)* factor(Prec.x) , data = TBI_variables) #+ soil_moist + pH
+summary(M1) 
 drop1(M1, test = "F")
 step(M1)
 
@@ -235,6 +230,48 @@ boxplot(E1~ factor(Prec.x), data= TBI_variables)
 boxplot(E1~ factor(year), data= TBI_variables)
 # no further relations with categorical variables
 
+#Dataset with means per site per year
+M2 <- lm( k ~  gridPrec , data = TBI_means) #+ soil_moist + pH
+summary(M2) 
+drop1(M2, test = "F")
+step(M2)
++pH + P_div
+
+###Model validation
+# Check for homogeneity
+E2 <- resid(M2)
+F2 <- fitted(M2)
+plot(x = F2, 
+     y = E2,
+     xlab = "Fitted values",
+     ylab = "Residuals")
+abline(h = 0, v = 0, lty = 2)
+
+#Influential observations
+par(mfrow = c(1, 1))
+plot(cooks.distance(M2), type = "h", ylim = c(0, 1))
+abline(h = 1)
+
+#Normality
+E2 <- resid(M2)
+hist(E2, breaks = 15)
+#right skew of residuals 
+
+#"Independence"
+#Plot residuals vs each covariate in the model
+#Plot residuals vs each covariate not in the model
+
+TBI_2015$E2 <- E2   #Put E2 inside the Birds object (which will give trouble if there are NAs)
+MySel <- c("Prec.CV",  "AvailN", "Plant_CN", "soil_CN", "Litter.CN", "Root", "Bryo", "Forbs", "Gram","Total", "P_div", "M_Shannon.H")
+
+Myxyplot(TBI_2015, MySel, "E2", MyYlab = "Residuals")
+# relation with plant diversity?
+
+boxplot(E2~ factor(Temp.x), data= TBI_2015)
+boxplot(E2~ factor(Prec.x), data= TBI_2015)
+boxplot(E2~ factor(year), data= TBI_2015)
+# no further relations with categorical variables
+
 
 ### Mean decomposition rates#######
 TBI_means<- TBI_variables%>%
@@ -261,6 +298,19 @@ Mydotplot(TBI_means[, MyVar])
 pairs(TBI_means[, MyVar], lower.panel = panel.cor)
 # collinearity for biomass terms, pH and Microbial_Shannon H /soil_CN
 
+boxplot(pH ~ factor(Temp), 
+        data = site_variables)
+cor.test(site_variables$pH, site_variables$Temp)
+#correlation between pH and Temp.x r=-0.85 p<0.001
+
+TBI_mean<-TBI_means %>%
+  filter(year == 2014)
+boxplot(P_div ~ factor(Temp.x), 
+        data = TBI_mean)
+cor.test(TBI_mean$P_div, TBI_mean$Temp.x)
+#correlation between P_div and Temp.x r=0.62 p<0.05
+
+
 ## Relationships Y vs X
 # check for relationships
 MyVar <- c("k", "S", "modelTemp", "gridPrec", "Temp.Var", "Prec.CV", "pH", "AvailN", "Plant_CN", "Root", "soil_CN", "Litter.CN", "soil_moist", "Total", "P_div", "M_Shannon.H")
@@ -268,24 +318,30 @@ MyVar <- c("k", "S", "modelTemp", "gridPrec", "Temp.Var", "Prec.CV", "pH", "Avai
 pairs(TBI_means[, MyVar], lower.panel = panel.cor)
 
 ####Full model on mean decomposition rates with all climatic variables
-M_m1<-lm( k ~ modelTemp + gridPrec + factor(Temp.x) * factor(Prec.x), data = TBI_means)
-summary(M_m1) # you cannot make up which parameters should be kept in the model
+M_m1<-lm( k ~  gridPrec +  P_div +pH , data = TBI_means)
+summary(M_m1) 
 drop1(M_m1, test = "F")
 step(M_m1) #adj R2 = 0.42, AIC=-472.65, p=0.012
+anova(M_m1)
 
-M_m2<- lm( k ~ modelTemp + gridPrec + pH + P.div, data = TBI_means) #+ soil_moist + pH
+modelTemp +
+M_m2<- lm( k ~  gridPrec + modelTemp + factor(Temp.x) + P_div +pH   , data = TBI_means) 
 summary(M_m2) # you cannot make up which parameters should be kept in the model
 drop1(M_m2, test = "F")
 step(M_m2)
 
+anova(M_m2, M_m1)
+# model M_m1 is better
+
+#Reduced dataframe 2015
 #model including factors that possibly explain decomposition rate
-M_m3<- lm(k ~ factor(Prec.x)+ soil_CN + pH + P_div + M_Shannon.H, data = TBI_means)
-summary(M_m3) # you cannot make up which parameters should be kept in the model
+M_m3<- lm(k ~ modelTemp + gridPrec +  pH + P_div , data = TBI_means2016)
+summary(M_m3) 
 drop1(M_m3, test = "F")
 step(M_m3) #adj R2 = 0.49, AIC=-215.43, p=0.07
 
-
-
++ factor(Temp.x) + pH + P_div
+anova(M_m1)
 
 # relationship between k and reduced dataset with only 2015 and 2016
 TBI_variables1516<- filter(TBI_variables, year>2014)
