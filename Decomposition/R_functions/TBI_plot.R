@@ -169,16 +169,6 @@ ggplot(TBI_variables, aes(gridPrec))+
   theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 18), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = "none", strip.text.x = element_text(size = 18))
 
 
-
-ggplot(TBI_variables)+
-  geom_boxplot(aes(x= factor(Prec.x), y= k, col= factor(year)))+
-  facet_wrap(~Temp.x)
-
-ggplot(TBI_variables)+
-  geom_boxplot(aes(x= factor(Temp.x), y= k, col= factor(Prec.x)))+
-  facet_wrap(~year)
-
-
 #Decomposition rate (k)
 
 ggplot(TBI_variables, aes(modelTemp))+
@@ -272,7 +262,7 @@ ggplot(TBI_variables, aes(Prec.x, k, fill = factor(Prec.x)))+
 
 #Supplementary data
 #Boxplot for manuscript decomp K against year split with Precipition level
-ggplot(TBI_variables2x, aes(factor(year), k, fill = factor(year)))+
+ggplot(TBI_variables, aes(factor(year), k, fill = factor(year)))+
   stat_boxplot(geom ='errorbar', width = 0.4)+
   geom_boxplot()+
   theme_classic()+
@@ -281,7 +271,6 @@ ggplot(TBI_variables2x, aes(factor(year), k, fill = factor(year)))+
   labs(x= "year", y = "Decomposition rate (k)")+
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), legend.position = c(0.9,0.9), legend.title = element_text(size= 22), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
-
 ggplot(TBI_variables2x, aes(year, k, fill = factor(year)))+
   stat_boxplot(geom ='errorbar', width = 0.4)+
   geom_boxplot()+
@@ -289,7 +278,7 @@ ggplot(TBI_variables2x, aes(year, k, fill = factor(year)))+
   facet_grid(.~Temp.x_f, switch= "both")+
   scale_fill_grey(start =0.4, end = 1.0, name= "year", labels = c("2014", "2015", "2016"))+
   labs(x= "Year", y = "Decomposition rate (k)")+
-  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), strip.text.x = element_text(size = 18) )
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), strip.text.x = element_text(size = 18), legend.position = "none" )
 
 ggplot(TBI_variables, aes(factor(year), k, fill = factor(year)))+
   stat_boxplot(geom ='errorbar', width = 0.4)+
@@ -436,14 +425,15 @@ ggplot(TBI_variables, aes(modelTemp))+
                      name="Tea", 
                      breaks=c("Rooibos", "Green"), 
                      labels = c("Rooibos", "Green")) +
-  scale_shape_manual(values = c(21, 21), 
-                     name="Tea", 
-                     breaks=c("Rooibos", "Green"), 
-                     labels = c("Rooibos", "Green")) +
   scale_linetype_manual(values = c("solid", "dotdash"), 
                         name="Tea", 
                         breaks=c("Rooibos", "Green"), 
                         labels = c("Rooibos", "Green"))+
+  scale_shape_manual(values = c(21, 21), 
+                     name="Tea", 
+                     breaks=c("Rooibos", "Green"), 
+                     labels = c("Rooibos", "Green")) +
+  guides(colour = guide_legend(override.aes = list(size=4)))+
 theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 20), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = c(.1,.9), legend.title = element_text(size= 22), legend.text = element_text(size= 22), strip.text.x = element_text(size = 18))
 
 ggplot(TBI_variables, aes(gridPrec))+
