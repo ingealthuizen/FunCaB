@@ -113,7 +113,14 @@ ggplot(x, aes(mean.P, mean.k, col = factor(templevel)))+
 
 TBI_grid<- TBI_variables%>%
             group_by(site, year) %>%
-            summarise(m.T = mean(modelTemp), m.P = mean(gridPrec))
+            summarise(m.T = max(modelTemp), m.P = max(gridPrec))
+
+#calculate mean +Sd for temp and prec per year
+TBI_variables%>%
+  group_by(year) %>%
+  summarise(m.T = mean(modelTemp), m.P = mean(gridPrec), sd.T = sd(modelTemp), sd.P = sd(gridPrec))
+
+
 
 # ANOVA 
 aov.T<- aov(m.T ~ factor(year), data=TBI_grid)
@@ -160,12 +167,12 @@ summary(Ag_lm)
 # Rb_T_2015 = 0.097 + 0.015 T, r2= 0.16, p<0.001
 # Rb_T_2016 = 0.301 + -0.005 T, r2= 0.03, p=0.08
 
-# Ag_T_2014 = r2= 0.02, p=0.12
-# Ag_T_2015 = r2= 0.25, p<0.001
-# Ag_T_2016 = r2= 0.13, p<0.001
-# Rb_T_2014 = r2= 0.03, p=0.07
-# Rb_T_2015 = r2= 0.06, p<0.01
-# Rb_T_2016 = r2= 0.001, p=0.71
+# Ag_P_2014 = r2= 0.02, p=0.12
+# Ag_P_2015 = r2= 0.25, p<0.001
+# Ag_P_2016 = r2= 0.13, p<0.001
+# Rb_P_2014 = r2= 0.03, p=0.07
+# Rb_P_2015 = r2= 0.06, p<0.01
+# Rb_P_2016 = r2= 0.001, p=0.71
 
 # linear regression decomp rate k with temp
 k_lm<-lm( k~ modelTemp, data= TBI_BOR)
