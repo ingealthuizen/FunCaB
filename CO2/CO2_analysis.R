@@ -20,17 +20,35 @@ combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
 setStartEndTimes(combine.data)
 
 
-data2016 <- list()
+#x$dat$keep = TRUE for newly set start and endtimes FALSE for ommited measurement points
 
-data2016[[1]] <- process(xlfile, 1)
+# fluxcalc should use data for $dat$keep ==TRUE
 
 
-#import all datafiles from 2015
+
+
+data2016 <- list(meta = meta.data, Tstart = tstart, Tfinish = tfinish, Temp=meantemp, PAR=  )
+
+cbind(input$meta, PAR=PAR, temp=temp, nee=nee, rsqd=rsqd)
+
+data2016[[1]] <- process.data(xlfile, 1)
+
+
+#import all pre removal datafiles from 2015 and all datafiles of 2016
 sites.data.2015<-read.sitefiles("CO2/Data/data_files_2015_pre.xlsx")
+sites.data.2016<-read.sitefiles("CO2/Data/data_files_2016new.xlsx") #!Only Li1400 data, not SQ files
 
 # Run fluxcalculation on all datafiles of 2015 
 #fluxcalc(sites.data.2015[[1]]) #calculate flux 1 plot
-overviewsitesdata<-do.call(rbind, lapply(sites.data.2015, fluxcalc)) #calculate flux all plots in all sites.
+overviewsitesdata_2015<-do.call(rbind, lapply(sites.data.2015, fluxcalc)) #calculate flux for all pre-removal data 2015
+
+overviewsitesdata_2016<-do.call(rbind, lapply(sites.data.2016, fluxcalc)) #calculate flux for all data 2016
+
+# add column were cover S1 and S2 are renamed L
+overviewsitesdata_2016$lightlevel<-overviewsitesdata_2016$cover
+overviewsitesdata_2016$cover<- as.factor(overviewsitesdata_2016$cover)
+levels(overviewsitesdata_2016$cover)<- c("D", "L", "L", "L")
+
 
 #explore datapoints graphs
 #allNEEtemp<-ggplot(overviewsitesdata, aes(temp, nee, color=site))+
@@ -42,39 +60,69 @@ overviewsitesdata<-do.call(rbind, lapply(sites.data.2015, fluxcalc)) #calculate 
 #import and process datafiles 2016 !Note that these are only Li1400 data, not SQ files, those need to be ran seperately!
 sites.data.2016<-read.sitefiles("CO2/Data/data_files_2016new.xlsx")
 
-#add columns with precipitation and temperature level
-tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
-names(tempV)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
-#tempV[overviewsitesdata$site]
-overviewsitesdata$templevel<-tempV[overviewsitesdata$site]
-
-precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
-names(precL)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
-overviewsitesdata$preclevel<-precL[overviewsitesdata$site]
-
-#plot overview of dark and light measurement data per site
-  #fluxboxplot<- ggplot(overviewsitesdata, aes(site,nee))
-  #fluxboxplot+geom_boxplot(aes(fill=factor(cover))) #plot of Reco and NEE per site
 
 # GPP calculation
 # create extra column with date only for calculating GPP= L(NEE)-D(Reco)
-y<-format(overviewsitesdata$starttime, format="%y-%m-%d")
-  overviewsitesdata$date<-y #make new date column
+y<-format(overviewsitesdata_2015$starttime, format="%y-%m-%d")
+  overviewsitesdata_2015$date<-y #make new date column
 
-y<-format(overviewsitesdata$starttime, format="%H")
-  overviewsitesdata$time<-y #make new date column  
+y<-format(overviewsitesdata_2015$starttime, format="%H")
+  overviewsitesdata_2015$time<-y #make new date column  
 
 #seperate L and D measurements and merge them in new file with new column GPP, selecting data with r2>=.9
-  SubsetL<-subset(overviewsitesdata, cover== "L" & rsqd>=.9)   
-  SubsetD<-subset(overviewsitesdata, cover== "D" & rsqd>=.9)   
-  SubsetD$Reco<-SubsetD$nee*-1
-  SubsetD$tempK<-SubsetD$temp+273.15
-  MergeLD<- merge(SubsetL, SubsetD, by=c("site", "block", "treatment", "date", "time"))
-  MergeLD$GPP<-MergeLD$nee.x- MergeLD$nee.y #NEE-Reco
+  CO2_NEE_2015<-subset(overviewsitesdata_2015, cover== "L" & rsqd>=.9 )   
+  CO2_RECO_2015<-subset(overviewsitesdata_2015, cover== "D" & rsqd>=.9 )   
+  CO2_RECO_2015$Reco<-CO2_RECO_2015$nee*-1
+  CO2_RECO_2015$tempK<-CO2_RECO_2015$temp+273.15
+  CO2_GPP_2015<- merge(CO2_NEE_2015, CO2_RECO_2015, by=c("site", "block", "treatment", "date", "time"))
+  CO2_GPP_2015$GPP<-CO2_GPP_2015$nee.x- CO2_GPP_2015$nee.y #NEE-Reco
+  
+#save CO2 flux data to csv file 
+  #write.table(CO2_NEE_2015, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_NEE_2015.csv")
+  #write.table(CO2_RECO_2015, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_RECO_2015.csv")
+  
+#make a data file of 2015 data including:
+  #date, time, site, block, treatment, PAR(mean), Temp(mean), Moisture(average), Re, NEE, NEP, traits?, cover/biomass?
+  CO2_GPP_2015<- CO2_GPP_2015[, c("site", "block", "treatment", "date", "time", "nee.x", "Reco", "GPP")]  
+  #write.table(CO2_GPP_2015, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_GPP_2015.csv")
+
+# create extra column with date only for calculating GPP= L(NEE)-D(Reco)
+  y<-format(overviewsitesdata_2016$starttime, format="%y-%m-%d")
+  overviewsitesdata_2016$date<-y #make new date column
+  
+  y<-format(overviewsitesdata_2016$starttime, format="%H")
+  overviewsitesdata_2016$time<-y #make new date column  
+  
+  
+#seperate L and D measurements and merge them in new file with new column GPP, selecting data with r2>=.9
+  CO2_NEE_2016<-subset(overviewsitesdata_2016, cover== "L" & rsqd>=.8 )   
+  CO2_RECO_2016<-subset(overviewsitesdata_2016, cover== "D" & rsqd>=.8 )   
+  CO2_RECO_2016$Reco<-CO2_RECO_2016$nee*-1
+  CO2_RECO_2016$tempK<-CO2_RECO_2016$temp+273.15
+  CO2_GPP_2016<- merge(CO2_NEE_2016, CO2_RECO_2016, by=c("site", "block", "treatment", "date", "time"))
+  CO2_GPP_2016$GPP<-CO2_GPP_2016$nee.x- CO2_GPP_2016$nee.y #NEE-Reco
+  
+   
+  
+#add columns with precipitation and temperature level
+  tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
+  names(tempV)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
+  #tempV[overviewsitesdata$site]
+  overviewsitesdata_2015$templevel<-tempV[overviewsitesdata_2015$site]
+  
+  precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+  names(precL)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
+  overviewsitesdata_2015$preclevel<-precL[overviewsitesdata_2015$site]
 
 #make a data file of 2015 data including:
 #date, time, site, block, treatment, PAR(mean), Temp(mean), Moisture(average), Re, NEE, NEP, traits?, cover/biomass?
+keep.columns <- c("y", "a")
+  DF[keeps]
   
+#plot overview of dark and light measurement data per site
+  #fluxboxplot<- ggplot(overviewsitesdata, aes(site,nee))
+  #fluxboxplot+geom_boxplot(aes(fill=factor(cover))) #plot of Reco and NEE per site
+    
 MyVar <- c("preclevel", "templevel" ,"temp", "PAR", "Reco")
   Mydotplot(SubsetD[,MyVar])
 pairs(SubsetD[,MyVar], 
