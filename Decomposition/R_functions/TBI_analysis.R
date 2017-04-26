@@ -115,12 +115,32 @@ TBI_grid<- TBI_variables%>%
             group_by(site, year) %>%
             summarise(m.T = max(modelTemp), m.P = max(gridPrec))
 
+#add columns with precipitation and temperature level
+tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_grid$templevel<-tempV[TBI_grid$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_grid$preclevel<-precL[TBI_grid$site]
+
+
 #calculate mean +Sd for temp and prec per year
-TBI_variables%>%
-  group_by(year) %>%
-  summarise(m.T = mean(modelTemp), m.P = mean(gridPrec), sd.T = sd(modelTemp), sd.P = sd(gridPrec))
+TBI_climate_M<-TBI_variables%>%
+  group_by(site) %>%
+  summarise(m.T = mean(modelTemp), m.P = mean(gridPrec), sd.T = sd(modelTemp), sd.P = sd(gridPrec), se.T = sd(modelTemp)/sqrt(length(modelTemp)), se.P = sd(gridPrec)/sqrt(length(gridPrec)))
 
+sd(x)/sqrt(length(x))
 
+tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_climate_M$templevel<-tempV[TBI_climate_M$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_climate_M$preclevel<-precL[TBI_climate_M$site]
 
 # ANOVA 
 aov.T<- aov(m.T ~ factor(year), data=TBI_grid)
@@ -132,6 +152,7 @@ aov.P<- aov(m.P ~ factor(year), data=TBI_grid)
 plot(aov.P)
 summary(aov.P)
 TukeyHSD(aov.P)
+
 
 ggplot(TBI_grid, aes(factor(year), m.P))+
   geom_boxplot()
