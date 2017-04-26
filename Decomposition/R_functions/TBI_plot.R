@@ -75,25 +75,49 @@ ggplot(TBI_variables, aes(modelTemp, k, col= factor(Temp.x)))+
    theme(axis.text = element_text(size = 15), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
          legend.text=element_text(size=12))
 
+#MANUsCRIPT PLOT CLIMATE DATA
+par(mar=c(5,5,2,2))
+plot(TBI_grid$m.T ~ TBI_grid$m.P,
+     xlab = "Summer Precipitation (mm)",
+     ylab = "Summer Temperature (°C)",
+     cex.axis=2, 
+     cex.lab=2.5,
+     xlim=c(100,1000),
+     ylim=c(6,14),
+     pch = c(24, 21, 22, 25)[as.numeric(TBI_grid$preclevel)], cex=2, # different 'pch' types 
+     bg = c("dodgerblue", "lightgreen","red")[as.numeric(TBI_grid$templevel)])
+  arrows(x0=TBI_climate_M$m.P-TBI_climate_M$sd.P, x1=TBI_climate_M$m.P+TBI_climate_M$sd.P, y0=TBI_climate_M$m.T, y1=TBI_climate_M$m.T,   length=0)
+  arrows(x0=TBI_climate_M$m.P, x1=TBI_climate_M$m.P, y0=TBI_climate_M$m.T-TBI_climate_M$sd.T, y1=TBI_climate_M$m.T+TBI_climate_M$sd.T,   length=0)
+  points(TBI_climate_M$m.P, TBI_climate_M$m.T, 
+            pch = c(24, 21, 22, 25)[as.numeric(TBI_climate_M$preclevel)], cex=4.5, lwd=3, 
+            bg = c("dodgerblue", "lightgreen","red")[as.numeric(TBI_climate_M$templevel)])
+
 
 # MANUSCRIPT PLOT1A
 ggplot(TBI_variables, aes(modelTemp))+
   geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
-  geom_point(aes(y= k, col= factor(Temp.x) , shape = factor(year)), size= 5, width = 0.1)+
+  geom_point(aes(y= k, fill= factor(Temp.x) , shape = factor(Prec.x)), size= 5, width = 0.1)+
   geom_smooth(aes(y= k, col= factor(Temp.x)), method = "lm", size=1.5, se = FALSE)+
-  #facet_wrap(~site)+
+  facet_wrap(~year)+
   labs(y= " Decomposition rate (k) ", x = "Temperature (°C)")+
-  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000", "#000000"),
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                    name="Elevation", 
+                    breaks=c("1", "2", "3"), 
+                    labels = c("ALP", "SUB", "BOR"))+
+  scale_colour_manual(values =c("dodgerblue","lightgreen", "red", "#000000"),
                        name="Elevation", 
                        breaks=c("1", "2", "3", "4"), 
                        labels = c("ALP", "SUB", "BOR", "ALL"))+
-  scale_shape_manual(values = c(1, 6, 8),
-                        name="Year", 
-                        breaks=c("2014", "2015", "2016"), 
-                        labels = c("2014", "2015", "2016")) +
+  scale_shape_manual(values = c(25, 22, 21, 24),
+                        name="Precipitation level", 
+                        breaks=c("1", "2", "3", "4"), 
+                        labels = c("1", "2", "3", "4")) +
   scale_x_continuous(breaks = c(7,8,9,10,11,12,13))+
   theme_classic()+
-  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.85),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = c(.1,.85),  legend.title = element_text(size= 22), legend.text = element_text(size= 22), strip.text.x = element_text(size = 18))
+
+
+
 
 ggplot(TBI_variables, aes(gridPrec))+
   geom_smooth(aes(y = Ag, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
@@ -152,21 +176,25 @@ ggplot(TBI_variables, aes(gridPrec))+
 # MANUSCRIPT PLOT 1B
 ggplot(TBI_variables, aes(gridPrec))+
   geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
-  geom_point(aes(y= k, col= factor(Temp.x) , shape = factor(year)), size= 5, width = 0.1)+
+  geom_point(aes(y= k, fill= factor(Temp.x) , shape = factor(year)), size= 5, width = 0.1)+
   geom_smooth(aes(y= k, col= factor(Temp.x)), method = "lm", size=1.5, se = FALSE)+
   #facet_wrap(~site)+
   labs(y= " Decomposition rate (k) ", x = "Precipitation (mm)")+
-  scale_color_manual(values =c("#3366FF","#33CC33", "#CC0000", "#500000" ),
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                     name="Elevation", 
+                     breaks=c("1", "2", "3"), 
+                     labels = c("ALP", "SUB", "BOR"))+
+  scale_color_manual(values =c("dodgerblue","lightgreen", "red", "#500000" ),
                      name="Elevation", 
                      breaks=c("1", "2", "3", "4"), 
                      labels = c("ALP", "SUB", "BOR", "ALL"))+
-  scale_shape_manual(values = c(1, 6, 8),
-                     name="Year", 
-                     breaks=c("2014", "2015", "2016"), 
-                     labels = c("2014", "2015", "2016")) +
+  scale_shape_manual(values = c(24, 21, 22, 25),
+                     name="Precipitation level", 
+                     breaks=c("1", "2", "3", "4"), 
+                     labels = c("1", "2", "3", "4")) +
   scale_x_continuous(breaks = c(100,200,300,400,500,600,700,800,900))+
   theme_classic()+
-  theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 18), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = "none", strip.text.x = element_text(size = 18))
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.text.x = element_text(size = 18))
 
 
 #Decomposition rate (k)
@@ -418,10 +446,10 @@ ggplot(TBI_variables, aes(modelTemp))+
   geom_point(aes(y= Ag*100, col="Green", shape= "Green"), size=4)+ 
   geom_smooth(aes( y =decomp.R*100 ,  linetype= "Rooibos"), col="#000000", method = "lm", se=FALSE)+
   geom_smooth(aes( y =Ag*100,  linetype = "Green"), col="#000000", method = "lm", se=FALSE)+
-  facet_grid(~Temp.x)+
+  facet_grid(~year)+
   theme_classic()+
   labs(y= " Decomposed tea (%) ", x = "Temperature (°C)")+
-  scale_color_manual(values =c("#339900","#CC0000"), 
+  scale_color_manual(values =c("green3","red4"), 
                      name="Tea", 
                      breaks=c("Rooibos", "Green"), 
                      labels = c("Rooibos", "Green")) +
@@ -429,25 +457,24 @@ ggplot(TBI_variables, aes(modelTemp))+
                         name="Tea", 
                         breaks=c("Rooibos", "Green"), 
                         labels = c("Rooibos", "Green"))+
-  scale_shape_manual(values = c(21, 21), 
+  scale_shape_manual(values = c(18, 18), 
                      name="Tea", 
                      breaks=c("Rooibos", "Green"), 
                      labels = c("Rooibos", "Green")) +
-  guides(colour = guide_legend(override.aes = list(size=4)))+
-theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 20), axis.title = element_text(size = 24), axis.text.y = element_text(size = 18), legend.position = c(.1,.9), legend.title = element_text(size= 22), legend.text = element_text(size= 22), strip.text.x = element_text(size = 18))
+theme(axis.title.x=element_text(size = 24), axis.text.x=element_text(size = 22), axis.title = element_text(size = 24), axis.text.y = element_text(size = 22), legend.position = c(.1,.9), legend.title = element_text(size= 22), legend.text = element_text(size= 22), strip.text.x = element_text(size = 20))
 
 ggplot(TBI_variables, aes(gridPrec))+
   geom_point(aes(y= decomp.R*100, col= "Rooibos", shape= "Rooibos"), size=4)+ 
   geom_point(aes(y= Ag*100, col="Green", shape= "Green"), size=4)+ 
   geom_smooth(aes( y =decomp.R*100,  linetype= "Rooibos"), col="#000000", method = "lm", se=FALSE)+
   geom_smooth(aes( y =Ag*100,  linetype = "Green"), col="#000000", method = "lm", se=FALSE)+
-  facet_wrap(~Temp.x)+
+  facet_wrap(~year)+
   labs(y= " Decomposed tea (%) ", x = "Precipitation (mm)")+
-  scale_color_manual(values =c("#339900","#CC0000"), 
+  scale_color_manual(values =c("green3","red4"), 
                      name="Tea", 
                      breaks=c("Rooibos", "Green"), 
                      labels = c("Rooibos", "Green")) +
-  scale_shape_manual(values = c(21, 21), 
+  scale_shape_manual(values = c(18, 18), 
                      name="Tea", 
                      breaks=c("Rooibos", "Green"), 
                      labels = c("Rooibos", "Green")) +
@@ -457,8 +484,93 @@ ggplot(TBI_variables, aes(gridPrec))+
                         labels = c("Rooibos", "Green"))+
   scale_x_continuous(breaks = c(300,500,700,900))+
   theme_classic()+
-  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = "none", strip.background = element_blank(), strip.text.x = element_blank())
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.background = element_blank(), strip.text.x = element_blank())
 
+ggplot(TBI_variables, aes(modelTemp))+
+  geom_point(aes(y= decomp.R*100, fill= factor(Temp.x) , shape = factor(Prec.x)), size=5)+ 
+  geom_point(aes(y= Ag*100, fill= factor(Temp.x) , shape = factor(Prec.x)), size=5)+ 
+  geom_smooth(aes( y =decomp.R*100,  linetype= "Rooibos"), col="#000000", method = "lm", se=FALSE)+
+  geom_smooth(aes( y =Ag*100,  linetype = "Green"), col="#000000", method = "lm", se=FALSE)+
+  facet_wrap(~year)+
+  labs(y= " Decomposed tea (%) ", x = "Temperature (°C)")+
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                    guide = FALSE)+
+  scale_colour_manual(values =c("#000000"))+
+  scale_shape_manual(values = c(25, 22, 21, 24),
+                     name="Precipitation level", 
+                     breaks=c("1", "2", "3", "4"), 
+                     labels = c("1", "2", "3", "4")) +
+  scale_linetype_manual(values = c("solid", "dotdash"), 
+                        name="Tea", 
+                        breaks=c("Rooibos", "Green"), 
+                        labels = c("Rooibos", "Green"))+
+  scale_x_continuous(breaks = c(2,4,6,8,10,12, 14))+
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = c(.08,.85), legend.title = element_text(size= 22), legend.text = element_text(size= 22), strip.text.x = element_text(size = 20))
+
+
+ggplot(TBI_variables, aes(gridPrec))+
+  geom_point(aes(y= decomp.R*100, fill= factor(Temp.x) , shape = factor(Prec.x)), size=5)+ 
+  geom_point(aes(y= Ag*100, fill= factor(Temp.x) , shape = factor(Prec.x)), size=5)+ 
+  geom_smooth(aes( y =decomp.R*100,  linetype= "Rooibos"), col="#000000", method = "lm", se=FALSE)+
+  geom_smooth(aes( y =Ag*100,  linetype = "Green"), col="#000000", method = "lm", se=FALSE)+
+  facet_wrap(~year)+
+  labs(y= " Decomposed tea (%) ", x = "Precipitation (mm)")+
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                    guide= FALSE)+
+  scale_colour_manual(values =c("#000000"))+
+  scale_shape_manual(values = c(25, 22, 21, 24),
+                     name="Precipitation level", 
+                     breaks=c("1", "2", "3", "4"), 
+                     labels = c("1", "2", "3", "4")) +
+  scale_linetype_manual(values = c("solid", "dotdash"), 
+                        name="Tea", 
+                        breaks=c("Rooibos", "Green"), 
+                        labels = c("Rooibos", "Green"))+
+  scale_x_continuous(breaks = c(300,500,700,900))+
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.background = element_blank(), strip.text.x = element_blank())
+
+
+
+ggplot(TBI_variables, aes(modelTemp))+
+  geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
+  geom_point(aes(y= k, fill= factor(Temp.x) , shape = factor(Prec.x)), size= 5, width = 0.1)+
+  #geom_smooth(aes(y= k, col= factor(Temp.x)), method = "lm", size=1.5, se = FALSE)+
+  facet_wrap(~year)+
+  labs(y= " Decomposition rate (k) ", x = "Temperature (°C)")+
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                    name="Elevation", 
+                    breaks=c("1", "2", "3"), 
+                    labels = c("ALP", "SUB", "BOR"))+
+  scale_colour_manual(values =c("#000000"))+
+  scale_shape_manual(values = c(25, 22, 21, 24),
+                     name="Precipitation level", 
+                     breaks=c("1", "2", "3", "4"), 
+                     labels = c("1", "2", "3", "4")) +
+  scale_x_continuous(breaks = c(7,8,9,10,11,12,13))+
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.text.x = element_text(size = 18))
+
+
+ggplot(TBI_variables, aes(gridPrec))+
+  geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
+  geom_point(aes(y= k, fill= factor(Temp.x) , shape = factor(Prec.x)), size= 5, width = 0.1)+
+  #geom_smooth(aes(y= k, col= factor(Temp.x)), method = "lm", size=1.5, se = FALSE)+
+  facet_wrap(~year)+
+  labs(y= " Decomposition rate (k) ", x = "Precipitation (mm)")+
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                    name="Elevation", 
+                    breaks=c("1", "2", "3"), 
+                    labels = c("ALP", "SUB", "BOR"))+
+  scale_colour_manual(values =c("#000000"))+
+  scale_shape_manual(values = c(25, 22, 21, 24),
+                     name="Precipitation level", 
+                     breaks=c("1", "2", "3", "4"), 
+                     labels = c("1", "2", "3", "4")) +
+  scale_x_continuous(breaks = c(300,500,700,900))+
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.text.x = element_text(size = 18))
 
 ggplot(TBI_variables, aes(modelTemp, col=factor(Prec.x)))+
   geom_point(aes(y= decomp.R*100, shape= "Rooibos"), size=3)+
