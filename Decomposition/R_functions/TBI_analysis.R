@@ -131,8 +131,6 @@ TBI_climate_M<-TBI_variables%>%
   group_by(site) %>%
   summarise(m.T = mean(modelTemp), m.P = mean(gridPrec), sd.T = sd(modelTemp), sd.P = sd(gridPrec), se.T = sd(modelTemp)/sqrt(length(modelTemp)), se.P = sd(gridPrec)/sqrt(length(gridPrec)))
 
-sd(x)/sqrt(length(x))
-
 tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
 names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
 #tempV[overviewsitesdata$site]
@@ -258,6 +256,11 @@ boxplot(E1~ factor(Prec.x), data= TBI_variables)
 boxplot(E1~ factor(year), data= TBI_variables)
 # no further relations with categorical variables
 
+#calculate how much variance each parameter explains
+af <- anova(M1)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
 #Dataset with means per site per year
 M2 <- lm( k ~  gridPrec , data = TBI_means) #+ soil_moist + pH
 summary(M2) 
@@ -350,16 +353,28 @@ M_m1<-lm( k ~  gridPrec +  P_div +pH , data = TBI_means)
 summary(M_m1) 
 drop1(M_m1, test = "F")
 step(M_m1) #adj R2 = 0.42, AIC=-472.65, p=0.012
-anova(M_m1)
+af<-anova(M_m1)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
 
 modelTemp +
 M_m2<- lm( k ~  gridPrec + modelTemp + factor(Temp.x) + P_div +pH   , data = TBI_means) 
 summary(M_m2) # you cannot make up which parameters should be kept in the model
 drop1(M_m2, test = "F")
 step(M_m2)
+af<-anova(M_m2)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
 
 anova(M_m2, M_m1)
 # model M_m1 is better
+
+#calculate how much variance each parameter explains
+af <- anova(M_m1)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
 
 #Reduced dataframe 2015
 #model including factors that possibly explain decomposition rate
