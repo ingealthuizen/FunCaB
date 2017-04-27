@@ -177,7 +177,7 @@ summary(aov.k)
 TukeyHSD(aov.k)
 
 ##### linear regression for Green and Rooibos tea for different years
-Ag_lm<-lm( decomp.R~ gridPrec, data= TBI_2016)
+Ag_lm<-lm( k~ modelTemp, data= TBI_2015)
 summary(Ag_lm) 
 # Ag_T_2014 = 0.467 + 0.013 T, r2= 0.11, p<0.001
 # Ag_T_2015 = 0.302 + 0.035 T, r2= 0.26, p<0.001
@@ -192,6 +192,13 @@ summary(Ag_lm)
 # Rb_P_2014 = r2= 0.03, p=0.07
 # Rb_P_2015 = r2= 0.06, p<0.01
 # Rb_P_2016 = r2= 0.001, p=0.71
+
+# k_T_2014 =  r2= 0.003, p=0.56
+# k_T_2015 =  r2= 0.04, p<0.05
+# k_T_2016 =  r2= 0.06, p=0.2
+# k_P_2014 = r2= 0.008, p=0.34
+# k_P_2015 = r2= 0.04, p<0.05
+# k_P_2016 = r2= 0.05, p<0.05
 
 # linear regression decomp rate k with temp
 k_lm<-lm( k~ modelTemp, data= TBI_BOR)
