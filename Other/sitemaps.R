@@ -55,25 +55,41 @@ a <- ggplot() +
             colour = "red", fill = NA) +
   coord_map(xlim = c(3, 33), ylim = c(57, 72)) +
   labs(x = NULL, y = NULL)
-
+a
 #print(a)# print this map until you are happy with it.
 
-b <- ggplot(dat, aes(x = longitude, y = latitude, colour = Precipitation,
-                     shape = Temperature, fill = Precipitation)) +
+b <- ggplot(dat, aes(x = longitude, y = latitude, colour = Temperature,
+                     shape = Precipitation, fill = Temperature)) +
   geom_map(aes(x = long, y = lat, map_id = region), data = norwaymapHires, map = norwaymapHires, colour = NA, fill = "grey60", inherit.aes = FALSE) +
-  geom_point(size = 3) +
+  geom_point(size = 4) +
   coord_map(xlim = xlim, ylim = ylim) +
   labs(x = NULL, y = NULL) +
-  scale_shape_manual(breaks = 1:3, labels = tempLab, values = c(24, 22, 25)) +
+  scale_shape_manual(breaks = 1:4, labels = precipLab, values = c(24, 21, 22, 25)) +
   guides(shape = guide_legend(override.aes = list(fill = "black")))+
-  scale_colour_brewer(breaks = 1:4, labels = precipLab, palette = "RdBu") +
-  scale_fill_brewer(breaks = 1:4, labels = precipLab, palette = "RdBu")
+  scale_fill_manual(values =c("dodgerblue","lightgreen", "red" ),
+                    name="Elevation", 
+                    breaks=c("1", "2", "3"), 
+                    labels = c("ALP", "SUB", "BOR"))+
+  scale_colour_manual(values =c("dodgerblue","lightgreen", "red", "#000000"),
+                      name="Elevation", 
+                      breaks=c("1", "2", "3", "4"), 
+                      labels = c("ALP", "SUB", "BOR", "ALL"))
+  #scale_fill_brewer(breaks = 1:3, labels = tempLab, palette = "RdBu")
+b
 #print(b)
 
 maptheme <- theme(
-  axis.text = element_blank(),
-  axis.ticks = element_blank(),
+  #axis.text = element_blank(),
+  #axis.ticks = element_blank(),
   panel.grid = element_blank(),
   panel.border = element_rect(fill = NA, colour = "black"),
   panel.background = element_blank()
 )
+
+
+grid.newpage()
+vp_b <- viewport(width = 1, height = 1, x = 0.5, y = 0.5)  # the larger map
+vp_a <- viewport(width = 0.4, height = 0.4, x = 0.66, y = 0.79)  # the inset in upper left
+print(b + maptheme, vp = vp_b)
+print(a + maptheme, vp = vp_a)
+
