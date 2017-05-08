@@ -76,6 +76,35 @@ ggplot(TBI_variables, aes(modelTemp, k, col= factor(Temp.x)))+
          legend.text=element_text(size=12))
 
 #MANUsCRIPT PLOT CLIMATE DATA
+TBI_grid<- TBI_variables%>%
+  group_by(site, year) %>%
+  summarise(m.T = max(modelTemp), m.P = max(gridPrec))
+
+#add columns with precipitation and temperature level
+tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_grid$templevel<-tempV[TBI_grid$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_grid$preclevel<-precL[TBI_grid$site]
+
+
+#calculate mean +Sd for temp and prec per year
+TBI_climate_M<-TBI_variables%>%
+  group_by(site) %>%
+  summarise(m.T = mean(modelTemp), m.P = mean(gridPrec), sd.T = sd(modelTemp), sd.P = sd(gridPrec), se.T = sd(modelTemp)/sqrt(length(modelTemp)), se.P = sd(gridPrec)/sqrt(length(gridPrec)))
+
+tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_climate_M$templevel<-tempV[TBI_climate_M$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_climate_M$preclevel<-precL[TBI_climate_M$site]
+
 par(mar=c(5,5,2,2))
 plot(TBI_grid$m.T ~ TBI_grid$m.P,
      xlab = "Summer Precipitation (mm)",
@@ -117,8 +146,6 @@ ggplot(TBI_variables, aes(modelTemp))+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = c(.1,.85),  legend.title = element_text(size= 22), legend.text = element_text(size= 22), strip.text.x = element_text(size = 18))
 
 
-
-
 ggplot(TBI_variables, aes(gridPrec))+
   geom_smooth(aes(y = Ag, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
   geom_point(aes(y= Ag, col= factor(year) , shape = factor(Temp.x)), size= 5, width = 0.1)+
@@ -153,7 +180,6 @@ ggplot(TBI_variables, aes(modelTemp))+
   theme_classic()+
   theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 20), axis.title = element_text(size = 25), axis.text.y = element_text(size = 18), legend.position = c(.1,.8),  legend.title = element_text(size= 20), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
 
-#Edit x-axis
 #Relation with Precipitation for 
 ggplot(TBI_variables, aes(gridPrec))+
   geom_smooth(aes(y = k, col = "black"), method = "lm", linetype= "dotdash", size=2.5, se= FALSE)+
@@ -400,7 +426,7 @@ ggplot(TBI_variables, aes(Ag, decomp.R, col=factor(Prec.x)))+
   facet_wrap(~year)
 
 # possible idea
-ggplot(TBI_means, aes(k, S, col=factor(year)))+
+ggplot(TBI_means, aes(pH, k, col=factor(Temp.x)))+
   geom_point()
   
 
@@ -570,7 +596,7 @@ ggplot(TBI_variables, aes(gridPrec))+
                      labels = c("1", "2", "3", "4")) +
   scale_x_continuous(breaks = c(300,500,700,900))+
   theme_classic()+
-  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.text.x = element_text(size = 18))
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.text.x = element_blank())
 
 ggplot(TBI_variables, aes(modelTemp, col=factor(Prec.x)))+
   geom_point(aes(y= decomp.R*100, shape= "Rooibos"), size=3)+
