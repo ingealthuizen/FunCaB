@@ -28,7 +28,7 @@ meantemp<-function(ibut, start, stop){
 
 # import CO2 and PAR data from datalogger 
 read.logger<-function(file){
-  log<-read.table(file, header=FALSE, skip = 12, fill=TRUE, sep="\t", stringsAsFactors = FALSE, col.names=c("indicator", "datetime", "value", "flag"))
+  log<-read.table(file, header=FALSE, skip = 12, fill=TRUE, sep="\t", stringsAsFactors = FALSE, col.names=c("indicator", "datetime", "value", "flag")) 
   log$value<-suppressWarnings(as.numeric(log$value))
   log<-log[!is.na(log$value),] #skips data is not numeric
   
@@ -109,12 +109,13 @@ process.data <- function(meta, logger, temp){
     co2 <- rename(co2, CO2 = value)
 
     # plot co2 against time and fit a loess trough data to identify outliers
-    #co2.fit<- with(co2, scatter.smooth(time, CO2))
+    #co2.fit<- with(co2, loess.smooth(time, CO2), span= 2/3, family = "gaussian")
     #resid <- resid(co2.fit)
     #fitted <- fitted(co2.fit)
      
     #plot(fitted, resid)
     #abline(h = 0, col= 8)
+    
     
     
     startpar<-which(logger$PAR$datetime==metdat$starttime)#or next
@@ -252,4 +253,30 @@ read.sitefiles<-function(file){
     import.everything(metaFile = r$meta.data, loggerFile = r$logger.data, tempFile = r$temp.data)
   }) #process data from all files
   unlist(sites.data, recursive = FALSE) # make on big list of data from all sites, without sublists
+}
+
+# find outliers based on lm and residuals
+find.outlier<- function(x){
+  original.lm <- lm (x$dat$co2~x$dat$time) # linear model for measurement including all datapoints
+  original.resid<- resid(orignal.lm) # calculate residuals of model
+  x$dat$resid<- original.resid # assign resid to data list
+  
+  # Choose a threshhold
+  outlier_threshold <- 0.3
+  
+  # Identify and print only metadata of outliers
+  outliers <- data[ abs(x$data$resid) > outlier_threshold, ]
+  print(outliers$x$meta)
+  
+  
+  #create threshold for identifying outliers within measurement and remove them from measurment
+  if (x$data$resid > outlier_threshold) {
+    x$data$co2<-NA
+
+  }
+}
+
+#loop for setting new start and end times for all measurements in file
+outlier.filter <- function(outlierremove){
+  lapply(outlierremove, find.outlier)
 }
