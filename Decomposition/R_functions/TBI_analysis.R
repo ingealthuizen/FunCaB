@@ -176,6 +176,12 @@ plot(aov.k)
 summary(aov.k)
 TukeyHSD(aov.k)
 
+aov.N <- aov(AvailN_mg.g ~ factor(Temp), data=site_variables)
+plot(aov.N)
+summary(aov.N)
+TukeyHSD(aov.N)
+
+
 ##### linear regression for Green and Rooibos tea for different years
 Ag_lm<-lm( k~ modelTemp, data= TBI_2015)
 summary(Ag_lm) 
@@ -218,15 +224,41 @@ ggplot(TBI_variables, aes(modelTemp, k, col= factor(Prec.x)))+
   geom_smooth(method = "lm")
 
 #############################Multilinear Model########################################################################################
-Ag_lm<-lm( decomp.R~ gridPrec, data= TBI_2016)
-summary(Ag_lm)
+
+### Mean decomposition rates#######
+TBI_means<- TBI_variables%>%
+  group_by(year, site)%>%
+  summarise_each(funs(mean(., na.rm =TRUE)))
+
+#add columns with precipitation and temperature level
+tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_means$Temp.x<-tempV[TBI_means$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_means$Prec.x<-precL[TBI_means$site]
+
+K_lm<-lm( k ~ pH + P_div  + soil_C.N  , data= TBI_means) #+ Litter.CN + factor(Temp.x) + factor(Prec.x)
+summary(K_lm)
+step(K_lm)
+
+K_lm2<-lm( k ~  gridPrec + factor(year)  , data= TBI_means) #modelTemp 
+summary(K_lm2)
+step(K_lm2)
 
 #Complete data set
 #Full model with all temperature and Precipitation terms
-M1 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x)* factor(Prec.x) , data = TBI_variables) #+ soil_moist + pH
+M1 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x)* factor(Prec.x) , data = TBI_means) #+ soil_moist + pH
 summary(M1) 
 drop1(M1, test = "F")
 step(M1)
+
+af<-anova(M1)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
 
 ###Model validation
 # Check for homogeneity
@@ -252,8 +284,8 @@ hist(E1, breaks = 15)
 #Plot residuals vs each covariate in the model
 #Plot residuals vs each covariate not in the model
 
-TBI_variables$E1 <- E1   #Put E2 inside the Birds object (which will give trouble if there are NAs)
-MySel <- c("Prec.CV",  "AvailN", "Plant_CN", "soil_CN", "Litter.CN", "Root", "Bryo", "Forbs", "Gram","Total", "P_div", "M_Shannon.H")
+TBI_means$E1 <- E1   #Put E2 inside the Birds object (which will give trouble if there are NAs)
+MySel <- c("Prec.CV",  "AvailN_mg.g", "Plant_CN", "soil_CN", "Litter.CN", "Root", "Bryo", "Forbs", "Gram","Total", "P_div", "M_Shannon.H")
 
 Myxyplot(TBI_variables, MySel, "E1", MyYlab = "Residuals")
 # relation with plant diversity?
@@ -262,11 +294,6 @@ boxplot(E1~ factor(Temp.x), data= TBI_variables)
 boxplot(E1~ factor(Prec.x), data= TBI_variables)
 boxplot(E1~ factor(year), data= TBI_variables)
 # no further relations with categorical variables
-
-#calculate how much variance each parameter explains
-af <- anova(M1)
-afss <- af$"Sum Sq"
-print(cbind(af,PctExp=afss/sum(afss)*100))
 
 #Dataset with means per site per year
 M2 <- lm( k ~  gridPrec , data = TBI_means) #+ soil_moist + pH
@@ -311,20 +338,7 @@ boxplot(E2~ factor(year), data= TBI_2015)
 # no further relations with categorical variables
 
 
-### Mean decomposition rates#######
-TBI_means<- TBI_variables%>%
-   group_by(year, site)%>%
-   summarise_each(funs(mean(., na.rm =TRUE)))
 
-#add columns with precipitation and temperature level
-tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
-names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
-#tempV[overviewsitesdata$site]
-TBI_means$Temp.x<-tempV[TBI_means$site]
-
-precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
-names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
-TBI_means$Prec.x<-precL[TBI_means$site]
 
 # create myVar for plotting with all variables
 MyVar <- c("modelTemp", "gridPrec", "Temp.Var", "Prec.CV", "pH", "AvailN", "Plant_CN", "Root", "soil_CN", "Litter.CN", "soil_moist", "Bryo", "Gram", "Forbs", "Litter", "Live", "Total", "P_div", "M_Shannon.H")
@@ -356,17 +370,17 @@ MyVar <- c("k", "S", "modelTemp", "gridPrec", "Temp.Var", "Prec.CV", "pH", "Avai
 pairs(TBI_means[, MyVar], lower.panel = panel.cor)
 
 ####Full model on mean decomposition rates with all climatic variables
-M_m1<-lm( k ~  gridPrec +  P_div +pH , data = TBI_means)
+M_m1<-lm( k ~  gridPrec +  pH + P_div, data = TBI_means)
 summary(M_m1) 
 drop1(M_m1, test = "F")
-step(M_m1) #adj R2 = 0.42, AIC=-472.65, p=0.012
+step(M_m1) #adj R2 = 0.42, AIC=-483.12, p=0.012
 af<-anova(M_m1)
 afss <- af$"Sum Sq"
 print(cbind(af,PctExp=afss/sum(afss)*100))
 
 
-modelTemp +
-M_m2<- lm( k ~  gridPrec + modelTemp + factor(Temp.x) + P_div +pH   , data = TBI_means) 
+
+M_m2<- lm( k ~  modelTemp + gridPrec  + factor(Temp.x) + factor(Prec.x) + P_div +pH   , data = TBI_means) 
 summary(M_m2) # you cannot make up which parameters should be kept in the model
 drop1(M_m2, test = "F")
 step(M_m2)
@@ -382,6 +396,15 @@ anova(M_m2, M_m1)
 af <- anova(M_m1)
 afss <- af$"Sum Sq"
 print(cbind(af,PctExp=afss/sum(afss)*100))
+
+#calculate how much variance each parameter explains
+Var_lm<- lm( k ~ factor(Temp.x)* factor(Prec.x), data= TBI_means) #factor(Temp.x), factor(Prec.x), factor(year)
+af <- anova(Var_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+#22% by year, 3% by elevation, 8% by prec level, 37% by site
+
 
 #Reduced dataframe 2015
 #model including factors that possibly explain decomposition rate
