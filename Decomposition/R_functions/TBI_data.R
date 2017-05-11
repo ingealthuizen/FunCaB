@@ -18,7 +18,7 @@ TBI$site<- as.factor(TBI$site)
 TBI$year<- as.factor(TBI$year)
 TBI$Temp<- as.factor(TBI$Temp)
 TBI$Prec<- as.factor(TBI$Prec)
-TBI$BurialDate<-TBI$`BurialDate `
+#TBI$BurialDate<-TBI$`BurialDate `
 #rounding of numeric data on 2 decimals
 is.num <- sapply(TBI, is.numeric)
 TBI[is.num] <- lapply(TBI[is.num], round, 3)
@@ -167,7 +167,7 @@ is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 3)
 
 # Remove unimportant and duplicate columns
-TBI_variables<- TBI_variables[ -c(1, 7:10, 12:15, 22, 28, 30:34, 50)]
+TBI_variables<- TBI_variables[ -c(1, 7:10, 12:15, 28:32, 48)]
 TBI_variables$year<- as.numeric(TBI_variables$year)
 
 #create new variable rain factor (RF), Lang et al 1976 Water and Plant Life. Springer: Berlin, Heidelberg, New York 
