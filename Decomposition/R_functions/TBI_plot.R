@@ -1,7 +1,7 @@
 # TBI plots 
 
 #change names of Temperature and precipitation levels
-levels(TBI_variables$Temp.x) <- c("Alp", "Sub", "Bor")
+levels(TBI_variables$Temp.x) <- c("ALP", "SUB", "BOR")
 levels(TBI_variables$Prec.x) <- c("Prec1", "Prec2", "Prec3", "Prec4")
 
 TBI_variables2<- TBI_variables
@@ -10,35 +10,35 @@ levels(TBI_variables2$Temp.x) <- c("All","All","All")
 
 
 TBI_variables2x<-bind_rows(TBI_variables2, TBI_variables)
-TBI_variables2x$Temp.x_f<- factor(TBI_variables2x$Temp.x, levels= c("All","Alp", "Sub", "Bor"))
+TBI_variables2x$Temp.x_f<- factor(TBI_variables2x$Temp.x, levels= c("All","ALP", "SUB", "BOR"))
 TBI_variables2x$Prec.x_f<- factor(TBI_variables2x$Prec.x, levels= c("All","Prec1", "Prec2", "Prec3", "Prec4"))
 
 levels(TBI_variables2x$Prec.x) <- c("Prec1", "Prec2", "Prec3", "Prec4")
 
 #add 
 TBI_variables2<-TBI_variables%>%
-                mutate(allprec.x == "all")
+                mutate(allprec.x == "All")
   
 #first run TBI_ibutton
 
 #change names of sites for manuscript
 modelclimate$Site <- as.factor(modelclimate$Site)
-levels(modelclimate$Site) <- c("Sub1", "Bor3", "Bor1", "Alp3", "Sub2", "Alp2", "Bor4", "Sub3", "Alp4", "Alp1", "Sub4", "Bor2")
-modelclimate$Site_f = factor(modelclimate$Site, levels= c("Alp1","Alp2","Alp3","Alp4","Sub1","Sub2","Sub3","Sub4","Bor1","Bor2","Bor3", "Bor4"))
+levels(modelclimate$Site) <- c("SUB1", "BOR3", "BOR1", "ALP3", "SUB2", "ALP2", "BOR4", "SUB3", "ALP4", "ALP1", "SUB4", "BOR2")
+modelclimate$Site_f = factor(modelclimate$Site, levels= c("ALP1","ALP2","ALP3","ALP4","SUB1","SUB2","SUB3","SUB4","BOR1","BOR2","BOR3", "BOR4"))
 
 # TBI climate comparison
-ggplot(modelclimate, aes(Date, color = Data))+
+ggplot(modelclimate, aes(Date, color = Datasource))+
   geom_line(aes(y= Temperature.x, col= "Met.no" ))+
   geom_line(aes(y= Temperature.y, col= "Climatestation"))+
   geom_line(aes(y= mn_sT, col= "Ibuttons"))+
   geom_line(aes(y= new_T, col= "Modelled"))+
-  facet_wrap(~Site_f, scales = "free_y")+
+  facet_wrap(~Site_f)+
   labs(x = "Date", y= "Temperature (°C)")+
   #scale_color_manual(values = c("#33CCFF", "#FF6666", "#33FF99", "#CC00FF"),
   #                  name= "Temperature data")+
   theme_bw()+
-  theme(axis.text = element_text(size = 10), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
-        legend.text=element_text(size=12))
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 18), legend.title=element_text(size=16), 
+        legend.text=element_text(size=14), strip.text = element_text(size = 16), panel.spacing.x=unit(2, "lines"))
 
 ggplot(AllTemp, aes(Date, color = loggertype))+
   geom_line(aes(y= Temperature.x, col= "Gridded" ))+
@@ -48,8 +48,8 @@ ggplot(AllTemp, aes(Date, color = loggertype))+
   facet_wrap(~Site, scales = "free_y")+
   labs(x = "Date", y= "Temperature (°C)")+
   theme_bw()+
-  theme(axis.text = element_text(size = 10), axis.title = element_text(size = 15), legend.title=element_text(size=14), 
-        legend.text=element_text(size=12))
+  theme(axis.text = element_text(size = 15), axis.title = element_text(size = 18), legend.title=element_text(size=16), 
+        legend.text=element_text(size=14))
 
 # first run TBI_ibutton, TBI_data and TBI_analysis
 
@@ -327,7 +327,7 @@ ggplot(TBI_variables, aes(factor(year), k, fill = factor(year)))+
   facet_grid(.~Prec.x, switch= "both")+
   scale_fill_grey(start =0.4, end = 1.0, name= "Year", labels = c("2014", "2015", "2016"))+
   labs(x= "year", y = "Decomposition rate (k)")+
-  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), legend.position = c(0.9,0.9), legend.title = element_text(size= 22), legend.text = element_text(size= 20), strip.text.x = element_text(size = 18))
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank(), axis.title = element_text(size = 25),axis.text.y = element_text(size = 18), legend.position = c(0.92,0.85), legend.title = element_text(size= 24), legend.text = element_text(size= 22), strip.text.x = element_text(size = 18))
 
 ggplot(TBI_variables2x, aes(year, k, fill = factor(year)))+
   stat_boxplot(geom ='errorbar', width = 0.4)+
