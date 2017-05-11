@@ -113,7 +113,7 @@ ggplot(x, aes(mean.P, mean.k, col = factor(templevel)))+
 
 TBI_grid<- TBI_variables%>%
             group_by(site, year) %>%
-            summarise(m.T = max(modelTemp), m.P = max(gridPrec))
+            summarise(m.T = mean(modelTemp), m.P = mean(gridPrec))
 
 #add columns with precipitation and temperature level
 tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
@@ -250,7 +250,7 @@ step(K_lm2)
 
 #Complete data set
 #Full model with all temperature and Precipitation terms
-M1 <- lm( k ~ modelTemp + gridPrec + factor(Temp.x)* factor(Prec.x) , data = TBI_means) #+ soil_moist + pH
+M1 <- lm( k ~  factor(Temp.x)* factor(Prec.x) , data = TBI_means) #+ soil_moist + pH  modelTemp + gridPrec +
 summary(M1) 
 drop1(M1, test = "F")
 step(M1)
@@ -406,59 +406,32 @@ print(cbind(af,PctExp=afss/sum(afss)*100))
 #22% by year, 3% by elevation, 8% by prec level, 37% by site
 
 
-#Reduced dataframe 2015
-#model including factors that possibly explain decomposition rate
-M_m3<- lm(k ~ modelTemp + gridPrec +  pH + P_div , data = TBI_means2016)
-summary(M_m3) 
-drop1(M_m3, test = "F")
-step(M_m3) #adj R2 = 0.49, AIC=-215.43, p=0.07
+## Mixed effects model
+library(lme4)
+library(nlme)
 
-+ factor(Temp.x) + pH + P_div
-anova(M_m1)
+MeM1<- gls(k ~ 1 + modelTemp + gridPrec + factor(Prec.x)* factor(Temp.x) ,
+           method= "REML", data= TBI_variables)
+MeM2<- lme(k ~ 1 + modelTemp + gridPrec + factor(Prec.x)* factor(Temp.x) , data= TBI_variables,
+           random = ~1 | year, method= "REML")
+MeM3<- lme(k ~ 1 + modelTemp + gridPrec + factor(Prec.x)* factor(Temp.x) , data= TBI_variables,
+           random = ~1 | site, method= "REML")
+MeM4<- lme(k ~ 1 + modelTemp + gridPrec + factor(Prec.x)* factor(Temp.x) , data= TBI_variables,
+           random = ~1 + year | site, method= "REML")
 
-# relationship between k and reduced dataset with only 2015 and 2016
-TBI_variables1516<- filter(TBI_variables, year>2014)
+MeM1<- gls(k ~ 1 + modelTemp + gridPrec + pH + P_div ,
+           method= "REML", data= TBI_variables)
+MeM2<- lme(k ~ 1 + modelTemp + gridPrec + pH + P_div  , data= TBI_variables,
+           random = ~1 | year, method= "REML")
+MeM3<- lme(k ~ 1 + modelTemp + gridPrec + pH + P_div  , data= TBI_variables,
+           random = ~1 | site, method= "REML")
+MeM4<- lme(k ~ 1 + modelTemp + gridPrec + pH + P_div  , data= TBI_variables,
+           random = ~1 + year | site, method= "REML")
 
-MyX  <- c("modelTemp", "gridPrec", "Prec2", "Temp.Var","Prec.CV", "AvailN", "Plant_CN", "soil_CN", "Litter.CN", "Total", "P_div", "M_Shannon.H")
-Myxyplot(TBI_variables1516, MyX, "k", MyYlab = "Decomposition (k)")
 
-M4<- lm( k ~ modelTemp + gridPrec + factor(Temp.x) , data = TBI_variables1516)
-summary(M4)
-drop1(M4, test = "F")
-step(M4)
-
-M5<- lm( k ~ modelTemp + gridPrec + factor(Temp.x) + , data = TBI_variables1516)
-summary(M5)
-drop1(M5, test = "F")
-step(M5)
-
-anova(M4, M5, test = "Chisq")
-
-# Cannot compare models because M4 with P_div has NA for 2014, so less data then M3, so stick with M3
-
-Mgt1 <- lm( Ag ~ modelTemp + gridPrec + factor(Temp.x) + pH + soil_moist, data = TBI_variables)
-summary(Mgt1) # you cannot make up which parameters should be kept in the model
-drop1(Mgt1, test = "F")
-step(Mgt1)
-
-Mrt1 <- lm( decomp.R ~ modelTemp + gridPrec + soil_moist, data = TBI_variables)
-summary(Mrt1) # you cannot make up which parameters should be kept in the model
-drop1(Mrt1, test = "F")
-step(Mrt1)
-
-Mrt2 <- lm( decomp.R ~ modelTemp + gridPrec , data = TBI_variables)
-summary(Mrt2) # you cannot make up which parameters should be kept in the model
-drop1(Mrt2, test = "F")
-step(Mrt2)
-
-anova(Mrt1, Mrt2)
-
-#plot fitted values vs observed values
-plot(x = F3, 
-     y = TBI_variables$k,
-     xlab = "Fitted values",
-     ylab = "Observed data")
-abline(coef = c(0, 1), lty = 2)
+AIC(MeM1, MeM2, MeM3, MeM4)
+anova( MeM1, MeM2, MeM3, MeM4)
+summary(MeM2)
 
 
 # calculate CV for GridTemp and GridPrec per site per year
