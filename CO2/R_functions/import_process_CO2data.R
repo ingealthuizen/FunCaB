@@ -255,28 +255,55 @@ read.sitefiles<-function(file){
   unlist(sites.data, recursive = FALSE) # make on big list of data from all sites, without sublists
 }
 
-# find outliers based on lm and residuals
-find.outlier<- function(x){
-  original.lm <- lm (x$dat$co2~x$dat$time) # linear model for measurement including all datapoints
-  original.resid<- resid(orignal.lm) # calculate residuals of model
-  x$dat$resid<- original.resid # assign resid to data list
-  
-  # Choose a threshhold
-  outlier_threshold <- 0.3
-  
-  # Identify and print only metadata of outliers
-  outliers <- data[ abs(x$data$resid) > outlier_threshold, ]
-  print(outliers$x$meta)
-  
-  
-  #create threshold for identifying outliers within measurement and remove them from measurment
-  if (x$data$resid > outlier_threshold) {
-    x$data$co2<-NA
 
-  }
+# find outliers based on lm and residuals
+find.outlier<- function(x, outlier_threshold = 5){
+    original.lm <- lm (CO2 ~ time, data = x$dat) # linear model for measurement including all datapoints
+    original.resid<- resid(original.lm) # calculate residuals of model
+    x$dat$resid<- original.resid # assign resid to data list
+  
+
+  
+    # Identify and print only metadata of outliers
+    outliers <- x$dat[abs(x$dat$resid) > outlier_threshold, ]
+    print(outliers)
+  
+  
+    #create threshold for identifying outliers within measurement and remove them from measurment
+    #if (x$data$resid > outlier_threshold) {
+    #x$data$co2<-NA
+  x
 }
+ 
+
 
 #loop for setting new start and end times for all measurements in file
 outlier.filter <- function(outlierremove){
   lapply(outlierremove, find.outlier)
 }
+outlier.filter(sites.data.2016)
+
+
+
+library(MASS)
+# check which measurements have outliers and compare that to outliers found manually!
+test.lm <-lm (combine.data[[12]]$dat$CO2~combine.data[[12]]$dat$time)
+plot(combine.data[[12]]$dat$CO2~combine.data[[12]]$dat$time)
+abline(test.lm)
+
+test.resid<- resid(test.lm)
+test.resid
+
+test.lm <-lm (combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
+plot(combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
+abline(test.lm)
+
+test.lm <-lm (combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
+plot(combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
+abline(test.lm)
+
+test.lm <-lm (combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
+plot(combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
+abline(test.lm)
+
+
