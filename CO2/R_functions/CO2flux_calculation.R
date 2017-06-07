@@ -15,7 +15,7 @@ fluxcalc<-function(input){
   co2<-input$dat$CO2 # umol/mol
   h2O<-8 #mean(input$H2O$value) estimated value mmol/mol
   PAR<-mean(input$dat$PAR, na.rm = TRUE)
-  press<- input$meta$airpress # kPA estimated value based on altitude site
+  press<- 1010 #input$meta$airpress # kPA estimated value based on altitude site
   temp<- input$dat$temp[1] # C 
   
   #ambient
@@ -41,6 +41,8 @@ fluxcalc<-function(input){
   # lines(time,temp4, col=4)
   #	   nee_exp
   
-  cbind(input$meta, PAR=PAR, temp=temp, nee=nee, rsqd=rsqd)
+  cbind(input$meta, time=max(time), PAR=PAR, temp=temp, nee=nee, rsqd=rsqd)
 }
 # make table of metadata and flux
+
+
