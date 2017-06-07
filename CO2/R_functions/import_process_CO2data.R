@@ -43,6 +43,7 @@ read.logger<-function(file){
   # leave out flagged values "x" (outliers) from 
   log$flag[is.na(log$flag)]<-""
   log$keep<-log$flag!="x"
+  
   log<-log[log$indicator%in%c(1,2,3),]
   datetime<- as.POSIXct(log$datetime, tz="", format="%Y-%m-%d %H:%M:%S")
   if(all(is.na(datetime))){
@@ -256,19 +257,17 @@ read.sitefiles<-function(file){
 }
 
 
-# find outliers based on lm and residuals
+# find outliers based on lm and based on residuals
 find.outlier<- function(x, outlier_threshold = 5){
     original.lm <- lm (CO2 ~ time, data = x$dat) # linear model for measurement including all datapoints
-    original.resid<- resid(original.lm) # calculate residuals of model
-    x$dat$resid<- original.resid # assign resid to data list
-  
-
-  
+    x$dat$resid<- resid(original.lm)
+    
     # Identify and print only metadata of outliers
     outliers <- x$dat[abs(x$dat$resid) > outlier_threshold, ]
     print(outliers)
-  
-  
+   
+     # check which measurements have outliers and compare that to outliers found manually!
+    
     #create threshold for identifying outliers within measurement and remove them from measurment
     #if (x$data$resid > outlier_threshold) {
     #x$data$co2<-NA
@@ -277,33 +276,108 @@ find.outlier<- function(x, outlier_threshold = 5){
  
 
 
-#loop for setting new start and end times for all measurements in file
+#loop for going through all measurements in one combination of datafiles
 outlier.filter <- function(outlierremove){
-  lapply(outlierremove, find.outlier)
+ lapply(outlierremove, find.outlier)
 }
-outlier.filter(sites.data.2016)
+
+#outlier.filter(outlier.testdata)
+
+#use lm and loess to test if measurement follows linear model
+# if not loess will be different from linear model; determine a certain threshold.
+# fit linear model over certain period of time using function rollaplly?
+#find a good testdataset from 2016 measurements that represent different types of not so linear measurements
+# if measurements not linear plot it in R markdown for further inspection
+
+#require(zoo)
+# find best fit for measurement
+#model.fit<- function(x){
+              # fit lm and loess model
+#              original.lm <- lm (CO2 ~ time, data = x$dat) # linear model for measurement including all datapoints
+#              original.loess<- loess.smooth(CO2 ~ time, data = x$dat, span = 3/3, degree = 2, family = "gaussian", 
+#                                            evaluation = count(time)) #evaluation should be equal to number of datapoint
+
+              #check linearity of measurement by comparing lm to loess fit, if not similar fit > further inspection
+#              plot(fitted(test.lm), test.loess$y)
+#              z<-lm(data.frame(fitted(test.lm), test.loess$y))
+#              summary(z)$r.squared < 0.9 # if r2 less than 0.9, linear model not appropriate for complete measurement
+#
+#             check for flat line
+#             if max(x$dat$CO2)- min(x$dat$CO2) <= 5 # accept linear model even with low r2
+#
+#              rolling regression with 13 datapoint
+#              rollapply(x, width = 13 FUN= function(Z),
+#                        { 
+#                          t = lm(CO2 ~ time, data = Z$dat, na.rm=T); 
+#                          return(t$r.squared) 
+#                        },
+#                       )
+
+              # how to evaluate best fit? and use best fit in fluxcalc ?
+
+#}
 
 
 
-library(MASS)
-# check which measurements have outliers and compare that to outliers found manually!
-test.lm <-lm (combine.data[[12]]$dat$CO2~combine.data[[12]]$dat$time)
-plot(combine.data[[12]]$dat$CO2~combine.data[[12]]$dat$time)
+test.lm <-lm (combine.data[[6]]$dat$CO2~combine.data[[6]]$dat$time)
+test.loess<- loess.smooth(combine.data[[6]]$dat$time,combine.data[[6]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
+plot(combine.data[[6]]$dat$CO2~combine.data[[6]]$dat$time)
 abline(test.lm)
+lines(test.loess$x, test.loess$y, col= "red")
 
-test.resid<- resid(test.lm)
-test.resid
-
-test.lm <-lm (combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
-plot(combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
+test.lm <-lm (combine.data[[11]]$dat$CO2~combine.data[[11]]$dat$time)
+test.loess<- loess.smooth(combine.data[[11]]$dat$time,combine.data[[11]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
+plot(combine.data[[11]]$dat$CO2~combine.data[[11]]$dat$time)
 abline(test.lm)
+lines(test.loess$x, test.loess$y, col= "red")
+
+T<-rollapply(t, width = 13, FUN = lm(dat.CO2 ~ dat.time), by.column =FALSE)
+
+t<-as.data.frame(combine.data[[1]])
+
+
+test.lm <-lm (combine.data[[18]]$dat$CO2~combine.data[[18]]$dat$time)
+test.loess<- loess.smooth(combine.data[[18]]$dat$time,combine.data[[18]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
+plot(combine.data[[18]]$dat$CO2~combine.data[[18]]$dat$time)
+abline(test.lm)
+lines(test.loess$x, test.loess$y, col= "red")
 
 test.lm <-lm (combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
+test.loess<- loess.smooth(combine.data[[3]]$dat$time,combine.data[[3]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
 plot(combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
 abline(test.lm)
+lines(test.loess$x, test.loess$y, col= "red")
 
-test.lm <-lm (combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
-plot(combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
+test.lm <-lm (combine.data[[7]]$dat$CO2~combine.data[[7]]$dat$time)
+test.loess<- loess.smooth(combine.data[[7]]$dat$time,combine.data[[7]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
+plot(combine.data[[7]]$dat$CO2~combine.data[[7]]$dat$time)
 abline(test.lm)
+lines(test.loess$x, test.loess$y, col= "red")
+
+test.lm <-lm (combine.data[[50]]$dat$CO2~combine.data[[50]]$dat$time)
+test.loess<- loess.smooth(combine.data[[50]]$dat$time,combine.data[[50]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
+plot(combine.data[[50]]$dat$CO2~combine.data[[50]]$dat$time)
+abline(test.lm)
+lines(test.loess$x, test.loess$y, col= "red")
+
+plot(fitted(test.lm), test.loess$y)
+x<-data.frame(fitted(test.lm), test.loess$y)
+
+
+h<-lm(data.frame(fitted(test.lm), test.loess$y))
+summary(h)$r.squared
+
+
+#test.lm <-lm (combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
+#plot(combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
+#abline(test.lm)
+
+#test.lm <-lm (combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
+#plot(combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
+#abline(test.lm)
+
+#test.lm <-lm (combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
+#plot(combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
+#abline(test.lm)
 
 
