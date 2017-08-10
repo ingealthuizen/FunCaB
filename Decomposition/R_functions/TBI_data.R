@@ -10,7 +10,7 @@ library(lattice)
 library(dplyr)
 library(reshape2)
 
-TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516new.xlsx")
+TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516new07082017.xlsx")
 
 
 #change particular columns to factors 
@@ -91,12 +91,12 @@ TBI_variables<-right_join(TBI, site_variables, by= "site")
 
 # load and read litter CN data
 Litter_data<- read_excel("O:/FunCab/Data/FunCaB/Decomposition/Data/Litter/Litter_CN2016.xlsx")
-Litter_data<- Litter_data %>%
+Litter_mean<- Litter_data %>%
               group_by(site) %>%
               summarise( Litter.C = mean(C), Litter.N = mean(N), Litter.CN = mean(CNratio))
 
 # combine data mean.site.variables with TBI based on site
-TBI_variables<-left_join(TBI_variables, Litter_data, by= "site")
+TBI_variables<-left_join(TBI_variables, Litter_mean, by= "site")
 
 
 # load soil moisture data 2014-2016
@@ -128,12 +128,12 @@ TBI_variables<-left_join(TBI_variables, biomass_data, by= c("site" = "Site", "ye
 P.diversity_data<- read.table ("O:/FunCab/Data/FunCaB/Other/Vegetation/diversity.txt", header= TRUE)
 
 #rename siteID to match TBI_variables
-newnames<-c("Alr","Arh", "Fau", "Gud", "Hog","Lav", "Ovs", "Ram", "Skj", "Ulv", "Ves", "Vik")
-names(newnames)<-c("Alrust","Arhelleren","Fauske","Gudmedelen","Hogsete","Lavisdalen", "Ovstedal","Rambera","Skjellingahaugen","Ulvhaugen","Veskre","Vikesland")
-P.diversity_data$site<-newnames[P.diversity_data$siteID]
+#newnames<-c("Alr","Arh", "Fau", "Gud", "Hog","Lav", "Ovs", "Ram", "Skj", "Ulv", "Ves", "Vik")
+#names(newnames)<-c("Alrust","Arhelleren","Fauske","Gudmedelen","Hogsete","Lavisdalen", "Ovstedal","Rambera","Skjellingahaugen","Ulvhaugen","Veskre","Vikesland")
+#P.diversity_data$site<-newnames[P.diversity_data$siteID]
 
 #Select diversity data from 2015 and 2016
-P.diversity_data<- subset(P.diversity_data, Year>=2014)
+P.diversity_data<- subset(P.diversity_data, Year>=2015)
 P.diversity_data$Year<- as.factor(P.diversity_data$Year)
 
 #P.diversity_data %>%
@@ -141,12 +141,12 @@ P.diversity_data$Year<- as.factor(P.diversity_data$Year)
  #summarise(sd=sd(diversity,na.rm=TRUE))
 
 # calculate mean richness and diversity and add as variables to TBI_variables
-P.diversity_data<-P.diversity_data %>%
+P.diversity_mean<-P.diversity_data %>%
                       group_by(site) %>%
                       summarise(P_div = mean(diversity, na.rm =TRUE), P_even = mean(evenness, na.rm =TRUE)) 
 
 
-TBI_variables<-left_join(TBI_variables, P.diversity_data, by= c("site" = "site"))
+TBI_variables<-left_join(TBI_variables, P.diversity_mean, by= c("site" = "site"))
 
 # read in microbial data
 microbial_data<- read_excel("O:/FunCab/Data/FunCaB/Decomposition/Data/TBI/Microbialdiversity_turfs.xlsx")
@@ -167,7 +167,7 @@ is.num <- sapply(TBI_variables, is.numeric)
 TBI_variables[is.num] <- lapply(TBI_variables[is.num], round, 3)
 
 # Remove unimportant and duplicate columns
-TBI_variables<- TBI_variables[ -c(1, 7:10, 12:15, 28:32, 48)]
+TBI_variables<- TBI_variables[ -c(1, 7:10, 12:15, 29:33, 49)]
 TBI_variables$year<- as.numeric(TBI_variables$year)
 
 #create new variable rain factor (RF), Lang et al 1976 Water and Plant Life. Springer: Berlin, Heidelberg, New York 
