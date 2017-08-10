@@ -3,7 +3,6 @@ source("CO2/R_functions/import_process_CO2data.R")
 source("CO2/R_functions/CO2flux_calculation.R")
 source("CO2/R_functions/CO2_plot.R")#give exact location of R functions.R file
 
-#site per site test of datafiles
 
 #ULV 02-08-2016_1
 ULV020816_1<-import.everything(
@@ -11,6 +10,8 @@ ULV020816_1<-import.everything(
   logger= "O:\\FunCab\\Data\\co2flux2016\\Flux2016 Li1400\\20160802_ULV_LI1400_CH1_1.txt",
   temp="O:\\FunCab\\Data\\co2flux2016\\Temperature files\\20160802_ULV_CH1_TEMP.txt"
 )
+ULV020816_1newTime<-setStartEndTimes(ULV020816_1)
+fluxULV<-do.call(rbind, lapply(ULV020816_1,fluxcalc))
 
 #ULV 02-08-2016_2
 ULV020816_2<-import.everything(
@@ -18,6 +19,7 @@ ULV020816_2<-import.everything(
   logger= "O:\\FunCab\\Data\\co2flux2016\\Flux2016 Li1400\\20160802_ULV_LI1400_CH1_2.txt",
   temp="O:\\FunCab\\Data\\co2flux2016\\Temperature files\\20160802_ULV_CH1_TEMP.txt"
 )
+ULV020816_2newTime<-setStartEndTimes(ULV020816_2)
 
 #LAV 03-08-2016_1
 LAV030816_1<-import.everything(
