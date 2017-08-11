@@ -34,27 +34,11 @@ TBI_variables<-TBI_variables %>%
 TBI_variables$year<- as.factor(TBI_variables$year)
 
 #remove rows with NA for k
-TBI_variables<-TBI_variables[!is.na(TBI_variables$k),]
+#TBI_variables<-TBI_variables[!is.na(TBI_variables$k),]
 
 #change names of Temperature and precipitation levels
 levels(TBI_variables$Temp.x) <- c("ALP", "SUB", "BOR")
 levels(TBI_variables$Prec.x) <- c("Prec1", "Prec2", "Prec3", "Prec4")
-
-TBI_variables2<- TBI_variables
-levels(TBI_variables2$Prec.x) <- c("All","All","All","All" )
-levels(TBI_variables2$Temp.x) <- c("All","All","All")
-
-
-TBI_variables2x<-bind_rows(TBI_variables2, TBI_variables)
-TBI_variables2x$Temp.x_f<- factor(TBI_variables2x$Temp.x, levels= c("All","ALP", "SUB", "BOR"))
-TBI_variables2x$Prec.x_f<- factor(TBI_variables2x$Prec.x, levels= c("All","Prec1", "Prec2", "Prec3", "Prec4"))
-
-levels(TBI_variables2x$Prec.x) <- c("Prec1", "Prec2", "Prec3", "Prec4")
-
-#add 
-TBI_variables2<-TBI_variables%>%
-  mutate(allprec.x == "All")
-
 
 # create subsets for different Precipitation levels of decompostion data
 TBI_P1<- TBI_variables[(TBI_variables$Prec.x == "1"),]
@@ -338,6 +322,8 @@ ggplot(TBI_variables, aes(modelTemp, k, col= factor(Prec.x)))+
 ########### Spatial climate effect - linear mixed-effects model ###################################################
 library(nlme)
 library(lme4)
+library(MASS)
+library(car)
 hist(TBI_BOR$k) # check normal distribution k and S for total and different temp levels
 TBI_variables$year<-as.factor(TBI_variables$year)
 
@@ -396,8 +382,32 @@ qqline(resid(M1))
 
 
 ##### Mixid linear model including environmental variables for means
+
+### Mean decomposition rates#######
+TBI_means<- TBI_variables%>%
+  group_by(year, site)%>%
+  summarise_each(funs(mean(., na.rm =TRUE)))
+
+#add columns with precipitation and temperature level
+tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_means$Temp.x<-tempV[TBI_means$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_means$Prec.x<-precL[TBI_means$site]
+
+# check probability distribution
+qqp(TBI_means$new.k, "norm") # is normally distributed
+
 #year and site random, fixed temp and prec
-MMfull<- lme(new.k~ factor(Temp.x)*factor(Prec.x), 
+MMfull<- lme(new.k~  factor(Temp.x) + factor(Prec.x) + gridTemp + gridPrec + pH + P_div , random= ~+1|year/site, 
+          data= TBI_means, method = "REML")
+anova(MMfull)
+stepAIC(MMfull)
+
+MMfull<- lme(new.k~ factor(Temp.x) + factor(Prec.x) + gridTemp + gridPrec + pH + P_div , 
              random= ~+1|year/site, data= TBI_means, method = "REML")
 anova(MMfull)
 summary(MMfull)
@@ -405,8 +415,9 @@ drop1(MMfull, test = "F")
 step(MMfull)
 #+ Plant_CN + AvailN + soil_C.N + Litter.CN +factor(Temp.x)
 
-
-
+MM1<- lmer(new.k ~ factor(Temp.x) + gridTemp + gridPrec + pH + P_div + (1|year) + (1|site), data= TBI_means)
+summary(MM1) # random effect is as good as 0 > use regular linear model instead see http://ase.tufts.edu/gsc/gradresources/guidetomixedmodelsinr/mixed%20model%20guide.html
+Anova(MM1)
 
 #############################Multilinear Model########################################################################################
 
