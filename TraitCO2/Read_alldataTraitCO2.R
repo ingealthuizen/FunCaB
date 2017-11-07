@@ -275,7 +275,7 @@ weighted.var <- function(x, w, na.rm = FALSE) {
 ### ! unsure about SLN calculation! and Variance calculation is probably wrong!!!!
 
 wcommunity_df_1516 <- wcommunity_1516 %>%
-  group_by(turfID, Site)%>%
+  group_by(turfID, Site, Year)%>%
   filter(!is.na(mean_cover)) %>%
   summarise(Wmean_LDMC= weighted.mean(LDMC_mean, cover, na.rm=TRUE),
             Wmean_Lth= weighted.mean(Lth_mean, cover, na.rm=TRUE),
@@ -439,7 +439,7 @@ CO2_flux <- CO2_flux %>%
   mutate(site = recode(site, ULV = "Ulv", ALR = "Alr", FAU = "Fau", LAV = "Lav", HOG = "Hog", VIK = "Vik", GUD = "Gud", RAM = "Ram", ARH = "Arh", SKJ = "Skj", VES = "Ves", OVS = "Ovs")) %>%
   mutate(turfID=paste0(site, block, removal))
 
-CO2_traits_community <- full_join(wcommunity_df_1516, CO2_flux, by=c("turfID"="turfID")) %>%
+CO2_traits_community <- right_join(wcommunity_df_1516, CO2_flux, by=c("turfID"="turfID", "Year"="year")) %>%
   mutate(site = factor(site, levels = c("Ulv", "Lav", "Gud", "Skj", "Alr", "Hog", "Ram", "Ves", "Fau", "Vik", "Arh", "Ovs")))%>%
   mutate(T_level = recode(site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal"))
 
@@ -447,17 +447,16 @@ CO2_traits_community <- full_join(wcommunity_df_1516, CO2_flux, by=c("turfID"="t
 #### Merging with biomass data ####
 
 CO2_mass_traits <- left_join(CO2_traits_community, biomass, by=c("turfID"="turfID"))
-CO2_mass_traits<- left_join(CO2_mass_traits, community_1516, by=c("turfID"="turfID", "year"="Year"))
+CO2_mass_traits<- left_join(CO2_mass_traits, community_1516, by=c("turfID"="turfID", "Year"="Year")) # double entries
 CO2_mass_traits<- CO2_mass_traits%>%
-  select(-site.x, -site.y)%>%
+  select(-site.x, site.y)%>%
   rename(Bryo_biomass = bryophytes, Forb_biomass = forbs, Gram_biomass = graminoids, Soil_cover = soil, Gram_cover = TotalGraminoids, Forb_cover= totalForbs, Bryo_cover = totalBryophytes, VegetationHeight = vegetationHeight, MossHeight = mossHeight )
 CO2_mass_traits$Vasc_cover<- CO2_mass_traits$Forb_cover+CO2_mass_traits$Gram_cover
 
 #count entries per column that are not NA
 #apply(CO2_mass_traits, 2, function(x) length(which(!is.na(x))))
+#!!! 1666 CO2 measurements but CO2 flux only has 1646?
 
-### change cover data to numeric
-CO2_mass_traits[,c(36:44)] <- as.numeric(as.integer(unlist(CO2_mass_traits[,c(36:44)])))
 
 
 # calculate Functional group biomass based on regression results of XC plots
