@@ -138,28 +138,8 @@ traitdata <- traitdata %>%
 #### WEIGHTED MEANS ####
 
 # Reading in and cleaning the community data so that it is ready to be used only for cover
-#write.xlsx(composition, "O:\\FunCab\\Data\\FunCaB\\TraitCO2\\composition_all_15-16.xlsx")
 
-community2016 <-read.csv2("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\funcab_composition_2016.csv", header=TRUE, sep=";", stringsAsFactors = FALSE)
-community2015 <-read.csv2("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\funcab_composition_2015.csv", header=TRUE, sep=";", stringsAsFactors = FALSE)
-Seedclim2015 <-read.csv2("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\seedclim2015.csv", header=TRUE, sep=";", stringsAsFactors = FALSE)
-Seedclim2016 <-read.csv2("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\seedclim2016.csv", header=TRUE, sep=";", stringsAsFactors = FALSE)
-
-community<-community2016 %>%
-  filter(Site!="")%>%
-  mutate(Site= substr(Site, 1,3))%>%
-  filter(Measure == "Cover")
-
-community_cover<-community%>%
-  select(-subPlot, -year, -date, -Measure, -recorder, -Nid.herb, -Nid.gram, -Nid.rosett, -Nid.seedling, -liver, -lichen, -litter, -soil, -rock, -X.Seedlings) %>%
-  select(-TotalGraminoids, -TotalForbs, -TotalBryophytes, -VegetationHeight, -MossHeight, -comment, -ver.seedl, -canum, -totalVascular, -totalBryophytes, -acro, -pleuro, -totalLichen)%>%
-  gather(species, cover, Ach.mil:Vis.vul)%>%
-  mutate(cover = as.numeric(cover))%>%
-  filter(!is.na(cover))%>%  #Takes out the species that is not present in the dataset
-  mutate(species=gsub("\\.", "_", species))%>%
-  mutate(Site = as.character(Site, levels = c("Ulv", "Lav", "Gud", "Skj", "Alr", "Hog", "Ram", "Ves", "Fau", "Vik", "Arh", "Ovs")))
-
-## community cover 2015-2016
+## community cover 2015-2016 with TTC
 load("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\funcabCompDataWithTTCnew.RData")
 community_cover_1516 <- comp2
 community_cover_1516 <- community_cover_1516 %>%
@@ -178,7 +158,7 @@ dict_com <- read.table(header = TRUE, stringsAsFactors = FALSE, text =
                        Euph_sp Eup_sp
                        Phle_alp Phl_alp
                        Rhin_min Rhi_min
-                       Rum_ac_la Rum_acl
+                       Rum_ac-la Rum_acl
                        Trien_eur Tri_eur
                        Rub_idae Rub_ida
                        Saus_alp Sau_alp
@@ -205,10 +185,28 @@ community_cover_1516<-community_cover_1516%>%
   mutate(mean_cover=mean(cover, na.rm=TRUE))%>% #If you want the turf data use mutate, if you want the site data use summarise
   ungroup()%>%
   mutate(species = plyr::mapvalues(species, from = dict_com$old, to = dict_com$new))
-# missing Rum_ac_la
+
 
 ### This can probably be deleted !
-#### calculate community traits for 2015 data
+#### calculate community traits for 2015 and 2016 FunCaB data without TTC's
+community2016 <-read.csv2("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\funcab_composition_2016.csv", header=TRUE, sep=";", stringsAsFactors = FALSE)
+community2015 <-read.csv2("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\funcab_composition_2015.csv", header=TRUE, sep=";", stringsAsFactors = FALSE)
+
+community<-community2016 %>%
+  filter(Site!="")%>%
+  mutate(Site= substr(Site, 1,3))%>%
+  filter(Measure == "Cover")
+
+community_cover<-community%>%
+  select(-subPlot, -year, -date, -Measure, -recorder, -Nid.herb, -Nid.gram, -Nid.rosett, -Nid.seedling, -liver, -lichen, -litter, -soil, -rock, -X.Seedlings) %>%
+  select(-TotalGraminoids, -TotalForbs, -TotalBryophytes, -VegetationHeight, -MossHeight, -comment, -ver.seedl, -canum, -totalVascular, -totalBryophytes, -acro, -pleuro, -totalLichen)%>%
+  gather(species, cover, Ach.mil:Vis.vul)%>%
+  mutate(cover = as.numeric(cover))%>%
+  filter(!is.na(cover))%>%  #Takes out the species that is not present in the dataset
+  mutate(species=gsub("\\.", "_", species))%>%
+  mutate(Site = as.character(Site, levels = c("Ulv", "Lav", "Gud", "Skj", "Alr", "Hog", "Ram", "Ves", "Fau", "Vik", "Arh", "Ovs")))
+
+
 community2015<-community2015 %>%
   filter(Site!="")%>%
   mutate(Site= substr(Site, 1,3))%>%
@@ -305,6 +303,46 @@ wcommunity_df_1516 <- wcommunity_1516 %>%
   mutate(T_level = recode(Site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal"))%>%
   ungroup()
 
+##### Rename TTC plots
+dict_TTC <- read.table(header = TRUE, stringsAsFactors = FALSE, text = 
+                         "old new
+                       51TTC Fau1C
+                       57TTC Fau2C
+                       68TTC Fau4C
+                       73TTC Fau5C
+                       29TTC Alr1C
+                       31TTC Alr2C
+                       134TTC Vik2C
+                       140TTC Vik3C
+                       141TTC Vik4C
+                       146TTC Vik5C
+                       101TTC Hog1C
+                       110TTC Hog2C
+                       115TTC Hog3C
+                       286TTC Ovs1C
+                       291TTC Ovs2C
+                       297TTC Ovs3C
+                       211TTC Arh1C
+                       222TTC Arh3C
+                       226TTC Arh4C
+                       263TTC Ves1C
+                       270TTC Ves2C
+                       281TTC ves5C
+                       194TTC Ram4C
+                       198TTC Ram5C
+                       6TTC Ulv2C
+                       11TTC Ulv3C
+                       236TTC Skj1C
+                       243TTC Skj2C
+                       246TTC Skj3C
+                       251TTC Skj4C
+                       511TTC Gud12C")
+
+wcommunity_df_1516$turfID <- gsub('\\s+', '', wcommunity_df_1516$turfID) # remove space between number and TTC
+wcommunity_df_1516<- wcommunity_df_1516%>%
+    mutate(turfID = plyr::mapvalues(turfID, from = dict_TTC$old, to = dict_TTC$new)) # rename turfID to match FunCaB naming
+
+
 
 ##### Biomass data #####
 
@@ -361,51 +399,19 @@ community2015<- community2015%>%
 community_all <- bind_rows(community2016, community2015) %>%
   filter(Measure =="Cover")
 
+
+### from here
 community_1516 <-comp2 %>%
   select(turfID, TTtreat, Year, soil, TotalGraminoids, totalForbs, totalBryophytes, vegetationHeight, mossHeight)
 community_1516$TTtreat <- community_1516$turfID # TTreat TTC name 
 community_1516$TTtreat <- gsub('\\s+', '', community_1516$TTtreat) # remove space between number and TTC
 
-##### Rename TTC plots
-dict_TTC <- read.table(header = TRUE, stringsAsFactors = FALSE, text = 
-                         "old new
-                       51TTC Fau1C
-                       57TTC Fau2C
-                       68TTC Fau4C
-                       73TTC Fau5C
-                       29TTC Alr1C
-                       31TTC Alr2C
-                       134TTC Vik2C
-                       140TTC Vik3C
-                       141TTC Vik4C
-                       146TTC Vik5C
-                       101TTC Hog1C
-                       110TTC Hog2C
-                       115TTC Hog3C
-                       286TTC Ovs1C
-                       291TTC Ovs2C
-                       297TTC Ovs3C
-                       211TTC Arh1C
-                       222TTC Arh3C
-                       226TTC Arh4C
-                       263TTC Ves1C
-                       270TTC Ves2C
-                       281TTC ves5C
-                       194TTC Ram4C
-                       198TTC Ram5C
-                       6TTC Ulv2C
-                       11TTC Ulv3C
-                       236TTC Skj1C
-                       243TTC Skj2C
-                       246TTC Skj3C
-                       251TTC Skj4C
-                       511TTC Gud12C")
+community_1516<-community_1516[!duplicated(community_1516[,c('turfID','Year')]),]
 
+##### Rename TTC plots
 community_1516<- community_1516%>%
 mutate(turfID = plyr::mapvalues(TTtreat, from = dict_TTC$old, to = dict_TTC$new)) # rename turfID to match FunCaB naming
 
-# remove duplicate rows
-community_1516<-community_1516[!duplicated(community_1516$turfID),]
 
 ###### Carbon flux data ######
 
@@ -441,11 +447,14 @@ CO2_traits_community <- full_join(wcommunity_df_1516, CO2_flux, by=c("turfID"="t
 #### Merging with biomass data ####
 
 CO2_mass_traits <- left_join(CO2_traits_community, biomass, by=c("turfID"="turfID"))
-CO2_mass_traits<- left_join(CO2_mass_traits, community_all, by=c("turfID"="turfID", "year"="year"))
+CO2_mass_traits<- left_join(CO2_mass_traits, community_1516, by=c("turfID"="turfID", "year"="Year"))
 CO2_mass_traits<- CO2_mass_traits%>%
-  select(-Site, -site.y, -siteID, -Measure)%>%
-  rename(Site = site.x, Bryo_biomass = bryophytes, Crypto_biomass = cryptograms, Forb_biomass = forbs, Gram_biomass = graminoids, Lichen_biomass = lichens, Litter_biomass = litter.x, pteri_biomass= pteridophytes, Litter_cover = litter.y, Soil_cover = soil, rock_cover = rock, Gram_cover = TotalGraminoids, Forb_cover= TotalForbs, Bryo_cover = TotalBryophytes)
+  select(-site.x, -site.y)%>%
+  rename(Bryo_biomass = bryophytes, Forb_biomass = forbs, Gram_biomass = graminoids, Soil_cover = soil, Gram_cover = TotalGraminoids, Forb_cover= totalForbs, Bryo_cover = totalBryophytes, VegetationHeight = vegetationHeight, MossHeight = mossHeight )
 CO2_mass_traits$Vasc_cover<- CO2_mass_traits$Forb_cover+CO2_mass_traits$Gram_cover
+
+#count entries per column that are not NA
+apply(CO2_mass_traits, 2, function(x) length(which(!is.na(x))))
 
 ### change cover data to numeric
 CO2_mass_traits[,c(36:44)] <- as.numeric(as.integer(unlist(CO2_mass_traits[,c(36:44)])))
