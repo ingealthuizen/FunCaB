@@ -454,7 +454,7 @@ CO2_mass_traits<- CO2_mass_traits%>%
 CO2_mass_traits$Vasc_cover<- CO2_mass_traits$Forb_cover+CO2_mass_traits$Gram_cover
 
 #count entries per column that are not NA
-apply(CO2_mass_traits, 2, function(x) length(which(!is.na(x))))
+#apply(CO2_mass_traits, 2, function(x) length(which(!is.na(x))))
 
 ### change cover data to numeric
 CO2_mass_traits[,c(36:44)] <- as.numeric(as.integer(unlist(CO2_mass_traits[,c(36:44)])))
