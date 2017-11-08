@@ -350,15 +350,15 @@ biomass_others <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\biomass_2016_oth
 
 biomass_others <- biomass_others%>%
   select(siteID, plotID, functional.group, dry.weight)%>%
-  mutate(dry.weight_m2 = dry.weight/0.0625)
+  mutate(dry.weight = dry.weight/0.0625)
 
 biomass_forbs <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\biomass_2016_forbs_complete.csv", header=TRUE, sep=";", dec=",", stringsAsFactors = FALSE)
 
 biomass_forbs <- biomass_forbs%>%
   select(siteID, plotID, functional.group, dry.weight)%>%
   group_by(siteID, plotID)%>%
+  mutate(dry.weight = dry.weight/0.0625)%>%
   summarise(dry.weight=sum(dry.weight))%>%
-  mutate(dry.weight_m2 = dry.weight/0.0625)%>%
   ungroup()%>%
   mutate(functional.group="forbs")
 
@@ -372,22 +372,25 @@ biomass_XC_long <- bind_rows(biomass_others, biomass_forbs)%>%
   select(-Block, -turf)%>%
   group_by(turfID)%>%
   filter(functional.group %in% c( "graminoids", "forbs" , "bryophytes"))%>%  # exclude non GFB from total.biomass sum
-  mutate(total.biomass=sum(dry.weight_m2))%>%
+  mutate(total.biomass=sum(dry.weight))%>%
   mutate(P_level = recode(site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4")) %>%
   mutate(T_level = recode(site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal"))%>%
   ungroup()
   
 
-biomass_XC <- spread(biomass_XC_long, functional.group, dry.weight_m2)%>%
+biomass_XC <- spread(biomass_XC_long, functional.group, dry.weight)%>%
   select(site, turfID, total.biomass, bryophytes, graminoids, forbs)
 
 biomass_removals <- read_excel("O:\\FunCab\\Data\\Vegetation data\\biomass_removals_2015.xlsx")
+
+
 biomass_removals <- biomass_removals %>%
-  mutate(dry.weight_m2 = dry.weight/0.0625)%>%
-  spread(Functional.group, dry.weight_m2)%>%
+  mutate(dry.weight = dry.weight/0.0625)%>%
+  spread(Functional.group, dry.weight)%>%
   rename(forbs = F, bryophytes = B, graminoids = G)%>%
   mutate(total.biomass= bryophytes+graminoids+forbs)%>%
   select(site, turfID, total.biomass, bryophytes, graminoids, forbs)
+#biomass_removals<- biomass_removals[!duplicated(biomass_removals$turfID), ] # remove duplicated rows
 
 ### Add together biomass data from XC and removals of 2015
 biomass<- bind_rows(biomass_XC, biomass_removals)
@@ -448,13 +451,14 @@ CO2_flux <- CO2_flux %>%
 CO2_traits_community <- right_join(wcommunity_df_1516, CO2_flux, by=c("turfID"="turfID", "Year"="year", "Site"="site")) %>%
   mutate(Site = factor(Site, levels = c("Ulv", "Lav", "Gud", "Skj", "Alr", "Hog", "Ram", "Ves", "Fau", "Vik", "Arh", "Ovs")))%>%
   mutate(T_level = recode(Site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal"))%>%
-  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4")) 
-
+  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", 
+                          Skj = "4", Ves = "4", Ovs = "4")) 
+  
 
 #### Merging with biomass data ####
 
 CO2_mass_traits <- left_join(CO2_traits_community, biomass, by=c("turfID"="turfID"))
-CO2_mass_traits<- left_join(CO2_mass_traits, community_1516, by=c("turfID"="turfID", "Year"="Year")) # double entries
+CO2_mass_traits<- left_join(CO2_mass_traits, community_1516, by=c("turfID"="turfID", "Year"="Year")) # double entries check plot names!
 CO2_mass_traits<- CO2_mass_traits%>%
   select(-site)%>%
   rename(Bryo_biomass = bryophytes, Forb_biomass = forbs, Gram_biomass = graminoids, Soil_cover = soil, Gram_cover = TotalGraminoids, Forb_cover= totalForbs, Bryo_cover = totalBryophytes, VegetationHeight = vegetationHeight, MossHeight = mossHeight )
@@ -473,6 +477,14 @@ CO2_mass_traits$B_c.biomass<- 0+2.46*CO2_mass_traits$Bryo_cover
 CO2_mass_traits$Total_c.biomass<- CO2_mass_traits$Gram_cover+CO2_mass_traits$Forb_cover+CO2_mass_traits$Bryo_cover
 CO2_mass_traits$P_level<- as.factor(CO2_mass_traits$P_level)
 CO2_mass_traits$VegetationHeight<- as.numeric(CO2_mass_traits$VegetationHeight)
+CO2_mass_traits$Temp.C<- as.numeric(CO2_mass_traits$Temp.C)
+CO2_mass_traits$P.mm<- as.numeric(CO2_mass_traits$P.mm)
+
+mutate(Temp.C = recode(Site, Ulv = "6.17", Lav = "6.45",  Gud = "5.87", Skj = "6.58", Alr = "9.14", Hog = "9.17", Ram = "8.77", 
+                       Ves = "8.67", Fau = "10.3", Vik = "10.55", Arh = "10.6", Ovs = "10.78"))%>%
+  mutate(P.mm = recode(Site, Ulv = "596", Alr = "789", Fau = "600", Lav = "1321", Hog = "1356", Vik = "1161", Gud = "1925", 
+                       Ram = "1848", Arh = "2044", Skj = "2725", Ves = "3029", Ovs = "2923")) 
+
 
 # recode P_level, because of NA's
 precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
@@ -522,15 +534,6 @@ ggplot(data=CO2_mass_traits)+
 
 
 
-ggplot(data=biomass_XC_long)+
-  geom_boxplot(aes(y=total.biomass, x=P_level))
 
-ggplot(data=biomass_XC_long)+
-  geom_boxplot(aes(y=total.biomass, x=T_level))
-#total biomass increases with T_level
-  
-ggplot(data=biomass_XC_long)+
-  geom_boxplot(aes(y=dry.weight, x=P_level, col= T_level))+
-  facet_wrap(~functional.group)
 
 
