@@ -47,6 +47,7 @@ traitdata <- traits %>%
   mutate(Site_sp=paste0(Site,"_", Species)) %>%
   full_join(LA, by=c("ID"="Image_file")) %>%
   mutate(SLA=Leaf_area/Dry_mass) %>%
+  mutate(LogSLA = log(SLA))%>%
   group_by(Species) %>%
   mutate(
     SLA_mean_global = mean(SLA, na.rm = TRUE),
@@ -60,6 +61,7 @@ traitdata <- traits %>%
   group_by(Site, Species) %>%
   mutate(
     SLA_mean = mean(SLA, na.rm = TRUE),
+    logSLA_mean = mean(LogSLA, na.rm=TRUE),
     Lth_mean = mean(Lth_ave, na.rm = TRUE),
     Height_mean = mean(Height, na.rm = TRUE),
     logHeight_mean = mean(LogHeight, na.rm = TRUE),
@@ -281,6 +283,7 @@ wcommunity_df_1516 <- wcommunity_1516 %>%
             Wmean_Lth= weighted.mean(Lth_mean, cover, na.rm=TRUE),
             Wmean_LA= weighted.mean(LA_mean, cover, na.rm=TRUE),
             Wmean_SLA= weighted.mean(SLA_mean, cover, na.rm=TRUE),
+            Wmean_logSLA= weighted.mean(logSLA_mean, cover, na.rm=TRUE),
             Wmean_Height= weighted.mean(Height_mean, cover, na.rm=TRUE),
             Wmean_logHeight= weighted.mean(logHeight_mean, cover, na.rm=TRUE),
             Wmean_CN = weighted.mean(CN_ratio_mean, cover, na.rm=TRUE),
@@ -375,9 +378,16 @@ biomass_XC_long <- bind_rows(biomass_others, biomass_forbs)%>%
   mutate(total.biomass=sum(dry.weight))%>%
   mutate(P_level = recode(site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4")) %>%
   mutate(T_level = recode(site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal"))%>%
+  mutate(Temp.C = recode(site, Ulv = "6.17", Lav = "6.45",  Gud = "5.87", Skj = "6.58", Alr = "9.14", Hog = "9.17", Ram = "8.77", 
+                       Ves = "8.67", Fau = "10.3", Vik = "10.55", Arh = "10.6", Ovs = "10.78"))%>%
+  mutate(P.mm = recode(site, Ulv = "596", Alr = "789", Fau = "600", Lav = "1321", Hog = "1356", Vik = "1161", Gud = "1925", 
+                       Ram = "1848", Arh = "2044", Skj = "2725", Ves = "3029", Ovs = "2923")) %>%
   ungroup()
-  
 
+biomass_XC_long$Temp.C<- as.numeric(biomass_XC_long$Temp.C)
+biomass_XC_long$P.mm<- as.numeric(biomass_XC_long$P.mm)
+  
+  
 biomass_XC <- spread(biomass_XC_long, functional.group, dry.weight)%>%
   select(site, turfID, total.biomass, bryophytes, graminoids, forbs)
 
@@ -452,8 +462,11 @@ CO2_traits_community <- right_join(wcommunity_df_1516, CO2_flux, by=c("turfID"="
   mutate(Site = factor(Site, levels = c("Ulv", "Lav", "Gud", "Skj", "Alr", "Hog", "Ram", "Ves", "Fau", "Vik", "Arh", "Ovs")))%>%
   mutate(T_level = recode(Site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal"))%>%
   mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", 
-                          Skj = "4", Ves = "4", Ovs = "4")) 
-  
+                          Skj = "4", Ves = "4", Ovs = "4")) %>%
+  mutate(Temp.C = recode(Site, Ulv = 6.17, Lav = 6.45,  Gud = 5.87, Skj = 6.58, Alr = 9.14, Hog = 9.17, Ram = 8.77, Ves = 8.67, 
+                         Fau = 10.3, Vik = 10.55, Arh = 10.6, Ovs = 10.78))%>%
+  mutate(P.mm = recode(Site, Ulv = 596, Alr = 789, Fau = 600, Lav = 1321, Hog = 1356, Vik = 1161, Gud = 1925, 
+                       Ram = 1848, Arh = 2044, Skj = 2725, Ves = 3029, Ovs = 2923)) 
 
 #### Merging with biomass data ####
 
@@ -477,14 +490,6 @@ CO2_mass_traits$B_c.biomass<- 0+2.46*CO2_mass_traits$Bryo_cover
 CO2_mass_traits$Total_c.biomass<- CO2_mass_traits$Gram_cover+CO2_mass_traits$Forb_cover+CO2_mass_traits$Bryo_cover
 CO2_mass_traits$P_level<- as.factor(CO2_mass_traits$P_level)
 CO2_mass_traits$VegetationHeight<- as.numeric(CO2_mass_traits$VegetationHeight)
-CO2_mass_traits$Temp.C<- as.numeric(CO2_mass_traits$Temp.C)
-CO2_mass_traits$P.mm<- as.numeric(CO2_mass_traits$P.mm)
-
-mutate(Temp.C = recode(Site, Ulv = "6.17", Lav = "6.45",  Gud = "5.87", Skj = "6.58", Alr = "9.14", Hog = "9.17", Ram = "8.77", 
-                       Ves = "8.67", Fau = "10.3", Vik = "10.55", Arh = "10.6", Ovs = "10.78"))%>%
-  mutate(P.mm = recode(Site, Ulv = "596", Alr = "789", Fau = "600", Lav = "1321", Hog = "1356", Vik = "1161", Gud = "1925", 
-                       Ram = "1848", Arh = "2044", Skj = "2725", Ves = "3029", Ovs = "2923")) 
-
 
 # recode P_level, because of NA's
 precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
