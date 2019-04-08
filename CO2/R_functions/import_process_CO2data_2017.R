@@ -13,7 +13,7 @@ read.ibutton<-function(file){
   ibut
 }
 
-#temp.data<-read.ibutton("CO2/Data/Temperature_files_2016/20160607_FAU_CH1_TEMP.txt")
+#temp.data<-read.ibutton("O:\\FunCab\\Data\\2017TEMP\\01082017_LI14000T_ULV.txt")
 #plot(temp.data)
 
 
@@ -58,7 +58,7 @@ read.logger<-function(file){
 
 
 #load logger file and assign log.data to different parameters
-#log.data<-read.logger("CO2/Data/Fluxdata2016_Li1400/20160607_FAU_LI1400_CH1_1.txt")
+#log.data<-read.logger("O:\\FunCab\\Data\\2017Li1400\\01082017ULV_1.txt")
 #CO2<-log.data$CO2
 #PAR<-log.data$PAR
 #H2O<-log.data$H2O
@@ -70,8 +70,8 @@ read.logger<-function(file){
 # import metadata of site 
 read.metadata<-function(file){
   metdat<-read.table(file, header=TRUE, fill=TRUE, stringsAsFactors = FALSE)
-  names(metdat)<-c("date", "starttime", "stoptime", "chamber", "site", "block", "treatment", "cover", "airpress", "vegbiomass", "flag", "removal")
-  metdat<- metdat[-c(13)]
+  names(metdat)<-c("date", "site", "block", "treatment", "chamber", "starttime", "stoptime", "PAR", "cover", "soilT", "weather", "comment", "flag")
+  #metdat<- metdat[-c(13)]
   metdat$starttime<- as.POSIXct(paste(metdat$date, metdat$starttime), tz="", format="%d.%m.%Y %H:%M:%S")
   metdat$stoptime<- as.POSIXct(paste(metdat$date, metdat$stoptime), tz="", format="%d.%m.%Y %H:%M:%S")
   #metdat$date<-NULL
@@ -80,7 +80,8 @@ read.metadata<-function(file){
   metdat
 }
 
-#meta.data<-read.metadata("CO2/Data/metadata_2016/07062016_FAU_ch1_1.txt")
+#meta.data<-read.metadata("O:\\FunCab\\Data\\CO2_metadata2017\\01082017_ULV_ch1_1.txt")
+
 
 #look for start and stoptimes of each measurement in metadata file within logger.data and temp.data
 process.data <- function(meta, logger, temp){
@@ -107,12 +108,12 @@ process.data <- function(meta, logger, temp){
     co2 <- logger$CO2[startCO2:stopCO2, ]
     co2$time <- unclass(co2$datetime - co2$datetime[1])
     co2 <- rename(co2, CO2 = value)
-
+    
     # plot co2 against time and fit a loess trough data to identify outliers
     #co2.fit<- with(co2, loess.smooth(time, CO2), span= 2/3, family = "gaussian")
     #resid <- resid(co2.fit)
     #fitted <- fitted(co2.fit)
-     
+    
     #plot(fitted, resid)
     #abline(h = 0, col= 8)
     
@@ -153,7 +154,7 @@ process.data <- function(meta, logger, temp){
       h2o<-logger$H2O[starth2o:stoph2o,]
       h2o <- rename(h2o, H2O = value)
     } else {
-        h2o <- data.frame(H20 = NA)
+      h2o <- data.frame(H20 = NA)
     }
     
     temp2<-meantemp(temp, metdat$starttime, metdat$stoptime)
@@ -166,7 +167,7 @@ process.data <- function(meta, logger, temp){
   cleaner[!vapply(cleaner, is.null, FUN.VALUE = TRUE)]    
 }  
 
-
+#select(par, datetime, PAR)
 #specifying data used in function process.data
 #plotme == TRUE will create plots for every measurement specified in proces.data by start and stoptime in meta.data
 #combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
@@ -175,42 +176,42 @@ process.data <- function(meta, logger, temp){
 
 # function to reset start and stoptime for CO2 measurement, default is startHappy and endHappy is FALSE
 setStartEnd <- function(x){
-      startHappy <- FALSE 
-      endHappy <- FALSE
-      tstart <- 0 #default is 0, otherwise give other starttime
-      tfinish <- Inf
-      while(!(startHappy & endHappy)){
-        layout(matrix(c(1,1,1,2,2,2,2,2,2), nrow = 3, ncol = 3, byrow = TRUE)) #plot PAR and CO2 in for measurement
-        par(mar=c(4,5,2,2))
-        plot.PAR(x)
-        plot.CO2(x)
+  startHappy <- FALSE 
+  endHappy <- FALSE
+  tstart <- 0 #default is 0, otherwise give other starttime
+  tfinish <- Inf
+  while(!(startHappy & endHappy)){
+    layout(matrix(c(1,1,1,2,2,2,2,2,2), nrow = 3, ncol = 3, byrow = TRUE)) #plot PAR and CO2 in for measurement
+    par(mar=c(4,5,2,2))
+    plot.PAR(x)
+    plot.CO2(x)
+    
+    
+    tstart1 <- readline("Enter preferred start time for fitting. \n Round to nearest integer second. press 'return':")
+    if(!grepl("^[0-9]+$", tstart1)){
       
-        
-        tstart1 <- readline("Enter preferred start time for fitting. \n Round to nearest integer second. press 'return':")
-        if(!grepl("^[0-9]+$", tstart1)){
-          
-          startHappy <- TRUE
-        } else {
-          tstart <- as.integer(tstart1)
-          startHappy <- FALSE
-        }
-        
-        
-        tfinish1 <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preferred, press 'return':")
-        if(!grepl("^[0-9]+$", tfinish1)){
-          
-          endHappy <- TRUE
-        } else{
-          tfinish <- as.integer(tfinish1)
-          endHappy <- FALSE
-        }
-        x$dat$keep[x$dat$time < tstart | x$dat$time > tfinish] <- FALSE
-        x$meta$tstart <- tstart
-        x$meta$tfinish <- tfinish
-      }   
-     
+      startHappy <- TRUE
+    } else {
+      tstart <- as.integer(tstart1)
+      startHappy <- FALSE
+    }
+    
+    
+    tfinish1 <- readline("Enter preferred finish time for fitting. \n Round to nearest integer second. original endtime is preferred, press 'return':")
+    if(!grepl("^[0-9]+$", tfinish1)){
+      
+      endHappy <- TRUE
+    } else{
+      tfinish <- as.integer(tfinish1)
+      endHappy <- FALSE
+    }
+    x$dat$keep[x$dat$time < tstart | x$dat$time > tfinish] <- FALSE
+    x$meta$tstart <- tstart
+    x$meta$tfinish <- tfinish
+  }   
+  
   x
-
+  
 }
 
 #loop for setting new start and end times for all measurements in file
@@ -258,26 +259,26 @@ read.sitefiles<-function(file){
 
 # find outliers based on lm and based on residuals
 find.outlier<- function(x, outlier_threshold = 5){
-    original.lm <- lm (CO2 ~ time, data = x$dat) # linear model for measurement including all datapoints
-    x$dat$resid<- resid(original.lm)
-    
-    # Identify and print only metadata of outliers
-    outliers <- x$dat[abs(x$dat$resid) > outlier_threshold, ]
-    print(outliers)
-   
-     # check which measurements have outliers and compare that to outliers found manually!
-    
-    #create threshold for identifying outliers within measurement and remove them from measurment
-    #if (x$data$resid > outlier_threshold) {
-    #x$data$co2<-NA
+  original.lm <- lm (CO2 ~ time, data = x$dat) # linear model for measurement including all datapoints
+  x$dat$resid<- resid(original.lm)
+  
+  # Identify and print only metadata of outliers
+  outliers <- x$dat[abs(x$dat$resid) > outlier_threshold, ]
+  print(outliers)
+  
+  # check which measurements have outliers and compare that to outliers found manually!
+  
+  #create threshold for identifying outliers within measurement and remove them from measurment
+  #if (x$data$resid > outlier_threshold) {
+  #x$data$co2<-NA
   x
 }
- 
+
 
 
 #loop for going through all measurements in one combination of datafiles
 outlier.filter <- function(outlierremove){
- lapply(outlierremove, find.outlier)
+  lapply(outlierremove, find.outlier)
 }
 
 #outlier.filter(outlier.testdata)
@@ -291,12 +292,12 @@ outlier.filter <- function(outlierremove){
 #require(zoo)
 # find best fit for measurement
 #model.fit<- function(x){
-              # fit lm and loess model
+# fit lm and loess model
 #              original.lm <- lm (CO2 ~ time, data = x$dat) # linear model for measurement including all datapoints
 #              original.loess<- loess.smooth(CO2 ~ time, data = x$dat, span = 3/3, degree = 2, family = "gaussian", 
 #                                            evaluation = count(time)) #evaluation should be equal to number of datapoint
 
-              #check linearity of measurement by comparing lm to loess fit, if not similar fit > further inspection
+#check linearity of measurement by comparing lm to loess fit, if not similar fit > further inspection
 #              plot(fitted(test.lm), test.loess$y)
 #              z<-lm(data.frame(fitted(test.lm), test.loess$y))
 #              summary(z)$r.squared < 0.9 # if r2 less than 0.9, linear model not appropriate for complete measurement
@@ -312,71 +313,6 @@ outlier.filter <- function(outlierremove){
 #                        },
 #                       )
 
-              # how to evaluate best fit? and use best fit in fluxcalc ?
+# how to evaluate best fit? and use best fit in fluxcalc ?
 
 #}
-
-
-
-test.lm <-lm (combine.data[[6]]$dat$CO2~combine.data[[6]]$dat$time)
-test.loess<- loess.smooth(combine.data[[6]]$dat$time,combine.data[[6]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
-plot(combine.data[[6]]$dat$CO2~combine.data[[6]]$dat$time)
-abline(test.lm)
-lines(test.loess$x, test.loess$y, col= "red")
-
-test.lm <-lm (combine.data[[11]]$dat$CO2~combine.data[[11]]$dat$time)
-test.loess<- loess.smooth(combine.data[[11]]$dat$time,combine.data[[11]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
-plot(combine.data[[11]]$dat$CO2~combine.data[[11]]$dat$time)
-abline(test.lm)
-lines(test.loess$x, test.loess$y, col= "red")
-
-T<-rollapply(t, width = 13, FUN = lm(dat.CO2 ~ dat.time), by.column =FALSE)
-
-t<-as.data.frame(combine.data[[1]])
-
-
-test.lm <-lm (combine.data[[18]]$dat$CO2~combine.data[[18]]$dat$time)
-test.loess<- loess.smooth(combine.data[[18]]$dat$time,combine.data[[18]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
-plot(combine.data[[18]]$dat$CO2~combine.data[[18]]$dat$time)
-abline(test.lm)
-lines(test.loess$x, test.loess$y, col= "red")
-
-test.lm <-lm (combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
-test.loess<- loess.smooth(combine.data[[3]]$dat$time,combine.data[[3]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
-plot(combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
-abline(test.lm)
-lines(test.loess$x, test.loess$y, col= "red")
-
-test.lm <-lm (combine.data[[7]]$dat$CO2~combine.data[[7]]$dat$time)
-test.loess<- loess.smooth(combine.data[[7]]$dat$time,combine.data[[7]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
-plot(combine.data[[7]]$dat$CO2~combine.data[[7]]$dat$time)
-abline(test.lm)
-lines(test.loess$x, test.loess$y, col= "red")
-
-test.lm <-lm (combine.data[[50]]$dat$CO2~combine.data[[50]]$dat$time)
-test.loess<- loess.smooth(combine.data[[50]]$dat$time,combine.data[[50]]$dat$CO2, span = 2/3, degree = 2, family = "gaussian", evaluation = 25)
-plot(combine.data[[50]]$dat$CO2~combine.data[[50]]$dat$time)
-abline(test.lm)
-lines(test.loess$x, test.loess$y, col= "red")
-
-plot(fitted(test.lm), test.loess$y)
-x<-data.frame(fitted(test.lm), test.loess$y)
-
-
-h<-lm(data.frame(fitted(test.lm), test.loess$y))
-summary(h)$r.squared
-
-
-#test.lm <-lm (combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
-#plot(combine.data[[2]]$dat$CO2~combine.data[[2]]$dat$time)
-#abline(test.lm)
-
-#test.lm <-lm (combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
-#plot(combine.data[[3]]$dat$CO2~combine.data[[3]]$dat$time)
-#abline(test.lm)
-
-#test.lm <-lm (combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
-#plot(combine.data[[4]]$dat$CO2~combine.data[[4]]$dat$time)
-#abline(test.lm)
-
-

@@ -1,159 +1,394 @@
+setwd("O:\\FunCab\\Data\\FunCaB\\")
 #source functions for import/proces and calculation of CO2 flux
 source("CO2/R_functions/import_process_CO2data.R") 
 source("CO2/R_functions/CO2flux_calculation.R")
 source("CO2/R_functions/CO2_plot.R")
+source("CO2/R_functions/import_process_SQlogger.R")
 #give exact location of R functions.R file
-#source("HighstatLibV10.R")
+source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 
 library(readxl) #require packages
 library(ggplot2)
 library(lattice)
 library(dplyr)
 
+
 # get specific functions from plyr by using plyr::ldply
 #==============================================================================================================================
-# importing single datafiles, process and set new start and end times. 
-temp.data<-read.ibutton("CO2/Data/Temperature_files_2016/20160622_FAU_CH1_TEMP.txt")
-log.data<-read.logger("CO2/Data/Fluxdata2016_Li1400/20160622_FAU_LI1400_CH1_1.txt")
-meta.data<-read.metadata("CO2/Data/metadata_2016/22062016_FAU_ch1_1.txt")
-combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
-setStartEndTimes(combine.data)
+# importing single datafiles, process and set new start and end times.
+#TEST DATASET for automated quality check
+#temp.data<-read.ibutton("CO2/Data/Temperature_files_2016/20160607_FAU_CH1_TEMP.txt")
+#log.data<-read.logger("CO2/Data/Fluxdata2016_Li1400/20160607_FAU_LI1400_CH1_1.txt")
+#meta.data<-read.metadata("CO2/Data/metadata_2016/07062016_FAU_ch1_1.txt")
+#combine.data<-process.data(meta=meta.data, logger=log.data, temp=temp.data)
 
+#Set new start and stoptime for measurement, always indicate start and stop value with numbers otherwise inf as stoptime!
+#TESTDATA<-setStartEndTimes(combine.data) # returns a list of which measurements to keep/ discard after setting new start/stoptime
+#outlier.filter(combine.data)
 
 #x$dat$keep = TRUE for newly set start and endtimes FALSE for ommited measurement points
-
 # fluxcalc should use data for $dat$keep ==TRUE
-
-
-
-
-data2016 <- list(meta = meta.data, Tstart = tstart, Tfinish = tfinish, Temp=meantemp, PAR=  )
-
-cbind(input$meta, PAR=PAR, temp=temp, nee=nee, rsqd=rsqd)
-
-data2016[[1]] <- process.data(xlfile, 1)
 
 
 #import all pre removal datafiles from 2015 and all datafiles of 2016
 sites.data.2015<-read.sitefiles("CO2/Data/data_files_2015_pre.xlsx")
-sites.data.2016<-read.sitefiles("CO2/Data/data_files_2016new.xlsx") #!Only Li1400 data, not SQ files
+#sites.data.2016<-read.sitefiles("CO2/Data/data_files_2016new.xlsx") #!Li1400 data
+sites.data.2016Li1400<-read.sitefiles("CO2/Data/datafiles_2016_cleaned.xlsx")#!Li1400 dataflagged outliers+new times
+sites.data.2016SQ<- read.sitefiles.SQ("CO2/Data/datafiles_2016_SQ.xlsx") #!SQ dataflagged outliers+new times
 
 # Run fluxcalculation on all datafiles of 2015 
 #fluxcalc(sites.data.2015[[1]]) #calculate flux 1 plot
 overviewsitesdata_2015<-do.call(rbind, lapply(sites.data.2015, fluxcalc)) #calculate flux for all pre-removal data 2015
-
-overviewsitesdata_2016<-do.call(rbind, lapply(sites.data.2016, fluxcalc)) #calculate flux for all data 2016
-
-# add column were cover S1 and S2 are renamed L
-overviewsitesdata_2016$lightlevel<-overviewsitesdata_2016$cover
-overviewsitesdata_2016$cover<- as.factor(overviewsitesdata_2016$cover)
-levels(overviewsitesdata_2016$cover)<- c("D", "L", "L", "L")
+overviewsitesdataLi1400_2016<-do.call(rbind, lapply(sites.data.2016Li1400, fluxcalc)) #calculate flux for all data 2016
+overviewsitesdataSQ_2016<-do.call(rbind, lapply(sites.data.2016SQ, fluxcalc)) #calculate flux for all data 2016
+overviewsitesdata_2015[,9:10]<- NA #recode airpress and vegbiomass to NA, because these columns will be changed to SoilT and vegHeight
 
 
-#explore datapoints graphs
-#allNEEtemp<-ggplot(overviewsitesdata, aes(temp, nee, color=site))+
-#geom_point(aes(fill=factor(site)), shape=1)+
-#geom_smooth(aes(fill=factor(site)), method=lm)+
-#scale_colour_hue(l=50)
-#allNEEtemp  
+# bind together 2016 from li1400 and SQ logger
+overviewsitesdata_2016<- rbind(overviewsitesdataSQ_2016, overviewsitesdataLi1400_2016)
+# bind together 2015 and 2016 data
+CO2data_1516<- rbind(overviewsitesdata_2016, overviewsitesdata_2015)
 
-#import and process datafiles 2016 !Note that these are only Li1400 data, not SQ files, those need to be ran seperately!
-sites.data.2016<-read.sitefiles("CO2/Data/data_files_2016new.xlsx")
+### rename turfID Control plots of 2015/ 2016 data from FC coding to TTC coding if plot is a TTC control
+CO2data_1516 <- CO2data_1516 %>%
+  mutate(site = recode(site, ULV = "Ulv", ALR = "Alr", FAU = "Fau", LAV = "Lav", HOG = "Hog", VIK = "Vik", GUD = "Gud", RAM = "Ram",
+                       ARH = "Arh", SKJ = "Skj", VES = "Ves", OVS = "Ovs")) %>%
+  mutate(turfID=paste0(site, block, treatment))
+CO2data_1516$date<- as.Date(CO2data_1516$date, format="%d.%m.%Y") # change date format from character to Date
+CO2data_1516$block<- as.character(CO2data_1516$block)
+CO2data_1516$X<- seq.int(nrow(CO2data_1516))
 
 
-# GPP calculation
-# create extra column with date only for calculating GPP= L(NEE)-D(Reco)
-y<-format(overviewsitesdata_2015$starttime, format="%y-%m-%d")
-  overviewsitesdata_2015$date<-y #make new date column
+##### Rename TTC plots
+dict_TTC <- read.table(header = TRUE, stringsAsFactors = FALSE, text = 
+                         "new old
+                       51TTC Fau1C
+                       57TTC Fau2C
+                       68TTC Fau4C
+                       73TTC Fau5C
+                       29TTC Alr1C
+                       31TTC Alr2C
+                       134TTC Vik2C
+                       140TTC Vik3C
+                       141TTC Vik4C
+                       146TTC Vik5C
+                       101TTC Hog1C
+                       110TTC Hog2C
+                       115TTC Hog3C
+                       286TTC Ovs1C
+                       291TTC Ovs2C
+                       297TTC Ovs3C
+                       211TTC Arh1C
+                       222TTC Arh3C
+                       226TTC Arh4C
+                       263TTC Ves1C
+                       281TTC Ves5C
+                       281TTC Ves4C
+                       194TTC Ram4C
+                       198TTC Ram5C
+                       6TTC Ulv2C
+                       11TTC Ulv3C
+                       236TTC Skj1C
+                       243TTC Skj2C
+                       246TTC Skj3C
+                       251TTC Skj4C
+                       511TTC Gud12C
+                       46TTC Alr4TTC
+                       307TTC Ovs5TTC
+                       216TTC Arh2TTC
+                       61TTC Fau3TTC
+                       78TTC  Lav1TTC
+                       85TTC  Lav2TTC
+                       87TTC  Lav3TTC
+                       94TTC  Lav4TTC
+                       99TTC  Lav5TTC")
 
-y<-format(overviewsitesdata_2015$starttime, format="%H")
-  overviewsitesdata_2015$time<-y #make new date column  
+#CO2data_1516 <- CO2data_1516 %>%
+#  mutate(turfID = plyr::mapvalues(turfID, from = dict_TTC$old, to = dict_TTC$new)) 
+
+
+# add mean soil moisture to each CO2flux measurement
+Soilmoisture<- read_excel("O:\\FunCab\\Data\\soil moisture\\Soilmoisture_1516.xlsx")
+Soilmoisture$date<- as.Date(Soilmoisture$date, tz="", format="%Y-%m-%d")
+Soilmoisture$Moisture<- as.numeric(Soilmoisture$Moisture)
+Soilmoisture$TurfID <- gsub('\\s+', '', Soilmoisture$TurfID)
+Soilmoisture<- Soilmoisture %>%
+  mutate(site = recode(site, ULV = "Ulv", ALR = "Alr", FAU = "Fau", LAV = "Lav", HOG = "Hog", VIK = "Vik", GUD = "Gud", RAM = "Ram",
+                       ARH = "Arh", SKJ = "Skj", VES = "Ves", OVS = "Ovs")) %>%
+  mutate(turfID=paste0(site, block, removal))
+
+
+CO2data_1516<- left_join(CO2data_1516, Soilmoisture, by = c("date"= "date", "site"= "site", "treatment" = "removal", "block"= "block"))%>%
+  distinct(X, .keep_all = TRUE)
+
+CO2data_1516<- CO2data_1516 %>%
+  select(-X, -TurfID, -treatment.y, -blockSD, -M1, -M2, -M3, -M4, -weather, -recorder, -comments, -turfID.y) 
+CO2data_1516<- CO2data_1516 %>%
+  rename(turfID = turfID.x)
+
+#missing_soilM <- CO2data_1516[is.na(CO2data_1516$Moisture),]
+#unique(missing_soilM$turfID)
+
+
+
+CO2data_1516<- CO2data_1516[ -c(11)] # remove column flag 
+CO2data_1516$treatment<- as.factor(CO2data_1516$treatment) #change treatment to factor
+CO2data_1516$removal<- CO2data_1516$treatment # copy treatment ID to removal column 
+CO2data_1516$date<- as.Date(CO2data_1516$date, format="%d.%m.%Y") # change date format from character to Date
+CO2data_1516$ToD<-format(CO2data_1516$starttime, format="%H") #create new Time of Day column 
+levels(CO2data_1516$treatment)<- c("C", "C", "C", "C", "C", "C", "C", "C", "RTC", "TTC","XC")# change all pre-removal treatments to C
+CO2data_1516$cover<- as.factor(CO2data_1516$cover)
+CO2data_1516$lightlevel<-CO2data_1516$cover
+levels(CO2data_1516$cover)<- c("D", "L", "L", "L") # convert shade levels S1 and S2 to L
+
+# Add column with year and change airpress and biomass column to numeric
+CO2data_1516$year<- format(CO2data_1516$date, "%Y") 
+CO2data_1516$airpress<- as.numeric(sub(",", ".", CO2data_1516$airpress, fixed = TRUE)) # change to numeric
+CO2data_1516$vegbiomass<- as.numeric(sub(",", ".", CO2data_1516$vegbiomass, fixed = TRUE)) # change to numeric
+CO2data_1516<-plyr::rename(CO2data_1516, c("airpress"="soilT", "vegbiomass"="vegHeight")) # change column names to correct names
+
+
+#add columns with precipitation and temperature level for 2015 data
+tempV<-c("ALP","ALP","ALP","ALP","SUB","SUB","SUB","SUB","BOR","BOR","BOR","BOR")
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+precL<-c("Prec1","Prec2","Prec3","Prec4","Prec1","Prec2","Prec3","Prec4","Prec1","Prec2","Prec3","Prec4")
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")  
+
+
+#tempV[overviewsitesdata$site]
+CO2data_1516$templevel<-tempV[CO2data_1516$site]
+CO2data_1516$templevel = factor(CO2data_1516$templevel, levels = c("ALP", "SUB", "BOR"))
+CO2data_1516$preclevel<-precL[CO2data_1516$site]
+CO2data_1516$preclevel = factor(CO2data_1516$preclevel, levels = c("Prec1", "Prec2", "Prec3", "Prec4"))
+CO2data_1516<-CO2data_1516%>%
+  mutate(Temp.C = recode(site, Ulv = 6.17, Lav = 6.45,  Gud = 5.87, Skj = 6.58, Alr = 9.14, Hog = 9.17, Ram = 8.77, 
+                       Ves = 8.67, Fau = 10.3, Vik = 10.55, Arh = 10.6, Ovs = 10.78))%>%
+  mutate(P.mm = recode(site, Ulv = 596, Alr = 789, Fau = 600, Lav = 1321, Hog = 1356, Vik = 1161, Gud = 1925, 
+                       Ram = 1848, Arh = 2044, Skj = 2725, Ves = 3029, Ovs = 2923))
+
+
+#CO2data_1516$Country <- "NO"
+#write.csv(CO2data_1516, "O:\\PFTC_DataHarmony\\Cflux_NO_Gradient_2015-2016.csv")
 
 #seperate L and D measurements and merge them in new file with new column GPP, selecting data with r2>=.9
-  CO2_NEE_2015<-subset(overviewsitesdata_2015, cover== "L" & rsqd>=.9 )   
-  CO2_RECO_2015<-subset(overviewsitesdata_2015, cover== "D" & rsqd>=.9 )   
-  CO2_RECO_2015$Reco<-CO2_RECO_2015$nee*-1
-  CO2_RECO_2015$tempK<-CO2_RECO_2015$temp+273.15
-  CO2_GPP_2015<- merge(CO2_NEE_2015, CO2_RECO_2015, by=c("site", "block", "treatment", "date", "time"))
-  CO2_GPP_2015$GPP<-CO2_GPP_2015$nee.x- CO2_GPP_2015$nee.y #NEE-Reco
+  CO2_NEE_1516<-subset(CO2data_1516, cover== "L" & rsqd>=.8 | cover== "L" & rsqd<=.2)   
+  CO2_RECO_1516<-subset(CO2data_1516, cover== "D" & rsqd>=.8)   
+  CO2_RECO_1516$Reco<-CO2_RECO_1516$nee*-1
+  CO2_RECO_1516$tempK<-CO2_RECO_1516$temp+273.15
+  CO2_GPP_1516<- inner_join(CO2_NEE_1516, CO2_RECO_1516, by=c( "chamber", "site", "block", "removal", "treatment", "date", "ToD", "templevel", "preclevel", "Temp.C", "P.mm", "year"))
+  CO2_GPP_1516$GPP<-CO2_GPP_1516$nee.x- CO2_GPP_1516$nee.y #NEE-Reco
   
-#save CO2 flux data to csv file 
-  #write.table(CO2_NEE_2015, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_NEE_2015.csv")
-  #write.table(CO2_RECO_2015, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_RECO_2015.csv")
   
-#make a data file of 2015 data including:
-  #date, time, site, block, treatment, PAR(mean), Temp(mean), Moisture(average), Re, NEE, NEP, traits?, cover/biomass?
-  CO2_GPP_2015<- CO2_GPP_2015[, c("site", "block", "treatment", "date", "time", "nee.x", "Reco", "GPP")]  
-  #write.table(CO2_GPP_2015, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_GPP_2015.csv")
+##### Exploratory plots uncleaned data ################################################################################################
+# Standardizing uncorrected data, Lloyd & Taylor 1994 , Thornley and Johnson (1990) Plant and Crop Modeling
+ggplot(CO2_RECO_1516, aes(x=tempK, y=Reco, col=factor(year)))+
+    geom_point(na.rm= TRUE)+
+    geom_smooth(method = "nls", formula= y~A*exp(-308.56/I(x-227.13)), method.args = list(start=c(A=0)), se=FALSE, na.rm= TRUE)+
+    facet_wrap(~templevel, scales= "free")+
+    theme_bw()
+  
+ggplot(CO2_GPP_1516, aes(x=PAR.x, y=GPP, col= factor(year)))+
+    geom_point(na.rm= TRUE)+
+    geom_smooth(method = "nls", formula= y~(A*B*x)/(A*x+B), method.args = list(start=c(A=0.01, B=2)), se=FALSE, na.rm= TRUE)+
+    #facet_grid(~templevel)+
+    theme_bw()
+  
+ggplot(CO2_RECO_1516, aes(x=tempK, y=Reco, col=factor(templevel)))+
+    geom_point(na.rm= TRUE)+
+    geom_smooth(method = "nls", formula= y~A*exp(-308.56/I(x-227.13)), method.args = list(start=c(A=0)), se=FALSE, na.rm= TRUE)+
+    facet_wrap(~preclevel, scales= "free")+
+    theme_bw()
+  
+ggplot(CO2_GPP_1516, aes(x=PAR.x, y=GPP))+
+    geom_point(na.rm= TRUE)+
+    geom_smooth(method = "nls", formula= y~(A*B*x)/(A*x+B), method.args = list(start=c(A=0.01, B=2)), se=FALSE, na.rm= TRUE)+
+    #facet_wrap(~preclevel, scales= "free")+
+    theme_bw()
+  
 
-# create extra column with date only for calculating GPP= L(NEE)-D(Reco)
-  y<-format(overviewsitesdata_2016$starttime, format="%y-%m-%d")
-  overviewsitesdata_2016$date<-y #make new date column
-  
-  y<-format(overviewsitesdata_2016$starttime, format="%H")
-  overviewsitesdata_2016$time<-y #make new date column  
-  
-  
-#seperate L and D measurements and merge them in new file with new column GPP, selecting data with r2>=.9
-  CO2_NEE_2016<-subset(overviewsitesdata_2016, cover== "L" & rsqd>=.8 )   
-  CO2_RECO_2016<-subset(overviewsitesdata_2016, cover== "D" & rsqd>=.8 )   
-  CO2_RECO_2016$Reco<-CO2_RECO_2016$nee*-1
-  CO2_RECO_2016$tempK<-CO2_RECO_2016$temp+273.15
-  CO2_GPP_2016<- merge(CO2_NEE_2016, CO2_RECO_2016, by=c("site", "block", "treatment", "date", "time"))
-  CO2_GPP_2016$GPP<-CO2_GPP_2016$nee.x- CO2_GPP_2016$nee.y #NEE-Reco
-  
-   
-  
-#add columns with precipitation and temperature level
-  tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
-  names(tempV)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
-  #tempV[overviewsitesdata$site]
-  overviewsitesdata_2015$templevel<-tempV[overviewsitesdata_2015$site]
-  
-  precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
-  names(precL)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
-  overviewsitesdata_2015$preclevel<-precL[overviewsitesdata_2015$site]
+###########  Data Cleaning  ############################################################################################################################  
+# CLEAN GPP data from negative values and only take control (C), extra control (XC) and RTC (RTC) measurements
+# C also contains all the before removal measurements of 2015!
+CO2_GPP_1516<-subset(CO2_GPP_1516, GPP>0 & PAR.x >200 & treatment == "C"| GPP>0 & PAR.x >200 & treatment== "XC" |GPP>0 & PAR.x >200 & treatment == "TTC")
+CO2_GPP_1516<-subset(CO2_GPP_1516, Reco>0 & treatment == "C"| Reco>0 & treatment== "XC"| Reco>0 & treatment== "TTC")
 
-#make a data file of 2015 data including:
-#date, time, site, block, treatment, PAR(mean), Temp(mean), Moisture(average), Re, NEE, NEP, traits?, cover/biomass?
-keep.columns <- c("y", "a")
-  DF[keeps]
-  
-#plot overview of dark and light measurement data per site
-  #fluxboxplot<- ggplot(overviewsitesdata, aes(site,nee))
-  #fluxboxplot+geom_boxplot(aes(fill=factor(cover))) #plot of Reco and NEE per site
-    
-MyVar <- c("preclevel", "templevel" ,"temp", "PAR", "Reco")
-  Mydotplot(SubsetD[,MyVar])
-pairs(SubsetD[,MyVar], 
-        lower.panel = panel.cor)
 
-MyVar <- c("preclevel.x", "templevel.x" ,"tempK", "PAR.x", "Reco15", "GPPnew")
-Mydotplot(MergeLD[,MyVar])
-pairs(MergeLD[,MyVar], 
-      lower.panel = panel.cor)
+# CLEAN GPP data from negative values and only take control and extra control measurements, not including RTC
+CO2_GPP_1516Trait<-subset(CO2_GPP_1516, GPP>0 & PAR.x >200 & treatment == "C"| GPP>0 & PAR.x >200 & treatment== "XC" )
+CO2_RECO_1516Trait<-subset(CO2_RECO_1516, Reco>0 & treatment == "C"| Reco>0 & treatment== "XC")
+
+
+########### Standardization of fluxdata same equation all data   ########################################################################################
+
+# recalculate Reco values to longterm summer temperature mean of each site for complete dataset 
+fit.Reco_ALL<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_RECO_1516Trait) #
+#Recalculating Reco to 15C values taking in account heteroscedasticity 
+CO2_RECO_1516Trait$Reco15<-CO2_RECO_1516Trait$Reco/fitted(fit.Reco_ALL)*(coef(fit.Reco_ALL)*exp(-308.56/I((CO2_RECO_1516Trait$Temp.C+273.15)-227.13)))
+
+#######!!!!!!!!
+# recalculate Reco values to a standard temperature for complete dataset 
+fit.R_ALL<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_GPP_1516Trait) #
+#Recalculating Reco to 15C values taking in account heteroscedasticity 
+CO2_GPP_1516Trait$Reco15<-CO2_GPP_1516Trait$Reco/fitted(fit.R_ALL)*(coef(fit.R_ALL)*exp(-308.56/I((CO2_GPP_1516Trait$Temp.C+273.15)-227.13)))
+
+# recalculate GPP to standard PAR for GPP
+fit.GPP_ALL<-nls((GPP~ (A*B*PAR.x)/(A*PAR.x+B)), start=c(A=0.01, B=2), data=CO2_GPP_1516Trait)
+#Recalculating GPP values taking in account heteroscedasticity 
+CO2_GPP_1516Trait$GPP700<-CO2_GPP_1516Trait$GPP/fitted(fit.GPP_ALL)*(((coef(fit.GPP_ALL)[1])*(coef(fit.GPP_ALL)[2])*700)/((coef(fit.GPP_ALL)[1])*700+(coef(fit.GPP_ALL)[2])))
+
+CO2_RECO_1516Trait$Reco15<- as.numeric(sub(",", ".", CO2_RECO_1516Trait$Reco15, fixed = TRUE))
+CO2_GPP_1516Trait$Reco15<- as.numeric(sub(",", ".", CO2_GPP_1516Trait$Reco15, fixed = TRUE)) # change to numeric
+CO2_GPP_1516Trait$GPP700<- as.numeric(sub(",", ".", CO2_GPP_1516Trait$GPP700, fixed = TRUE)) # change to numeric
+
+CO2_RECO_1516Trait$year<- format(CO2_RECO_1516Trait$date, "%Y") 
+CO2_GPP_1516Trait$year<- format(CO2_GPP_1516Trait$date, "%Y")
+
+
+#CO2_GPP_1516Trait & CO2_RECO_1516Trait
+ggplot(CO2_RECO_1516Trait, aes(x=tempK, y=Reco, col=factor(templevel)))+
+  geom_point(na.rm= TRUE)+
+  geom_smooth(method = "nls", formula= y~A*exp(-308.56/I(x-227.13)), method.args = list(start=c(A=0)), se=FALSE, na.rm= TRUE)+
+  facet_grid(~year)
+
+ggplot(CO2_GPP_1516Trait, aes(x=PAR.x, y=GPP))+
+  geom_point(na.rm= TRUE, shape = 1)+
+  geom_smooth(method = "nls", formula= y~(A*B*x)/(A*x+B), method.args = list(start=c(A=0.01, B=2)), se=FALSE, na.rm= TRUE)+
+  labs(x= expression(paste("PAR")), y = expression(paste("GPP")))+
+  annotate("text", x=800, y=22, label= "GPP ~ 0.035*13.58*PAR/(0.035*PAR) + 13.58", size =4)+
+  theme_classic()
+
+ggplot(CO2_GPP_1516Trait, aes(x=tempK, y=Reco))+
+  geom_point(na.rm= TRUE, shape = 1)+
+  geom_smooth(method = "nls", formula= y~A*exp(-308.56/I(x-227.13)), method.args = list(start=c(A=0)), se=FALSE, na.rm= TRUE)+
+  labs(x= expression(paste("Temperature (K)")), y = expression(paste("Reco")))+
+  annotate("text", x=287, y=16, label= "Reco ~ 541.8*e^(-308.56/temp K)", size =4)+
+  theme_classic()
+
+
+
+ggplot(CO2_RECO_1516Trait, aes(preclevel, Reco15, col=factor(templevel)))+
+  geom_boxplot()
+ggplot(CO2_GPP_1516Trait, aes(preclevel, GPP700, col=factor(templevel)))+
+  geom_boxplot()
+
+#save standardized CO2 data for trait analysis
+#write.csv(CO2_GPP_1516Trait, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_GPP_1516Trait04122017.csv")
+#write.csv(CO2_RECO_1516Trait, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_RECO_1516Trait04122017.csv")
+
+
+
+############### Standardization of fluxdata equation per T-level #################################################################################
+# recalculate Reco values to a standard temperature for the seperate temperature levels
+# divide dataset into seperate templevel
+CO2_RECO_ALP<-subset(CO2_RECO_1516Trait, templevel == "ALP")   
+CO2_RECO_SUB<-subset(CO2_RECO_1516Trait, templevel == "SUB")
+CO2_RECO_BOR<-subset(CO2_RECO_1516Trait, templevel == "BOR")
+
+fit.Reco_ALP<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_RECO_ALP)
+fit.Reco_SUB<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_RECO_SUB)
+fit.Reco_BOR<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_RECO_BOR)
+
+#Recalculating Reco to 15C values taking in account heteroscedasticity 
+CO2_RECO_ALP$Reco15<-CO2_RECO_ALP$Reco/fitted(fit.Reco_ALP)*(coef(fit.Reco_ALP)*exp(-308.56/I(288.15-227.13)))
+CO2_RECO_SUB$Reco15<-CO2_RECO_SUB$Reco/fitted(fit.Reco_SUB)*(coef(fit.Reco_SUB)*exp(-308.56/I(288.15-227.13)))
+CO2_RECO_BOR$Reco15<-CO2_RECO_BOR$Reco/fitted(fit.Reco_BOR)*(coef(fit.Reco_BOR)*exp(-308.56/I(288.15-227.13)))
+
+# recalculate data to one Temp for Reco and to standard PAR for GPP
+CO2_GPP_ALP<-subset(CO2_GPP_1516Trait, templevel == "ALP")  
+CO2_GPP_SUB<-subset(CO2_GPP_1516Trait, templevel == "SUB")
+CO2_GPP_BOR<-subset(CO2_GPP_1516Trait, templevel == "BOR")
+
+fit.GPP_ALP<-nls((GPP~ (A*B*PAR.x)/(A*PAR.x+B)), start=c(A=0.01, B=2), data=CO2_GPP_ALP)
+fit.GPP_SUB<-nls((GPP~ (A*B*PAR.x)/(A*PAR.x+B)), start=c(A=0.01, B=2), data=CO2_GPP_SUB)
+fit.GPP_BOR<-nls((GPP~ (A*B*PAR.x)/(A*PAR.x+B)), start=c(A=0.01, B=2), data=CO2_GPP_BOR)
+
+fit.G.Reco_ALP<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_GPP_ALP)
+fit.G.Reco_SUB<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_GPP_SUB)
+fit.G.Reco_BOR<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_GPP_BOR)
+
+
+#Recalculating GPP values taking in account heteroscedasticity 
+CO2_GPP_ALP$GPP1200<-CO2_GPP_ALP$GPP/fitted(fit.GPP_ALP)*(((coef(fit.GPP_ALP)[1])*(coef(fit.GPP_ALP)[2])*1200)/((coef(fit.GPP_ALP)[1])*1200+(coef(fit.GPP_ALP)[2])))
+#plot(CO2_GPP_ALP$tempK, CO2_GPP_ALP$GPP1000)
+CO2_GPP_SUB$GPP1200<-CO2_GPP_SUB$GPP/fitted(fit.GPP_SUB)*(((coef(fit.GPP_SUB)[1])*(coef(fit.GPP_SUB)[2])*1200)/((coef(fit.GPP_SUB)[1])*1200+(coef(fit.GPP_SUB)[2])))
+CO2_GPP_BOR$GPP1200<-CO2_GPP_BOR$GPP/fitted(fit.GPP_BOR)*(((coef(fit.GPP_BOR)[1])*(coef(fit.GPP_BOR)[2])*1200)/((coef(fit.GPP_BOR)[1])*1200+(coef(fit.GPP_BOR)[2])))
+
+CO2_GPP_ALP$Reco15<-CO2_GPP_ALP$Reco/fitted(fit.G.Reco_ALP)*(coef(fit.G.Reco_ALP)*exp(-308.56/I(288.15-227.13)))
+CO2_GPP_SUB$Reco15<-CO2_GPP_SUB$Reco/fitted(fit.G.Reco_SUB)*(coef(fit.G.Reco_SUB)*exp(-308.56/I(288.15-227.13)))
+CO2_GPP_BOR$Reco15<-CO2_GPP_BOR$Reco/fitted(fit.G.Reco_BOR)*(coef(fit.G.Reco_BOR)*exp(-308.56/I(288.15-227.13)))
+
+# Bind back together all templevels with recalculated fluxes into one dataframe
+RECO_Traitdata_1516<- rbind(CO2_RECO_BOR, CO2_RECO_SUB, CO2_RECO_ALP)
+GPP_Traitdata_1516<- rbind(CO2_GPP_BOR, CO2_GPP_SUB, CO2_GPP_ALP)
+
+RECO_Traitdata_1516$Reco15<- as.numeric(sub(",", ".", RECO_Traitdata_1516$Reco15, fixed = TRUE))
+GPP_Traitdata_1516$Reco15<- as.numeric(sub(",", ".", GPP_Traitdata_1516$Reco15, fixed = TRUE)) # change to numeric
+GPP_Traitdata_1516$GPP1200<- as.numeric(sub(",", ".", GPP_Traitdata_1516$GPP1200, fixed = TRUE)) # change to numeric
+
+RECO_Traitdata_1516$year<- format(RECO_Traitdata_1516$date, "%Y") 
+GPP_Traitdata_1516$year<- format(GPP_Traitdata_1516$date, "%Y")
+
+#save standardized CO2 data for trait analysis
+#write.csv(GPP_Traitdata_1516, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_GPP_1516Trait04122017.csv")
+#write.csv(RECO_Traitdata_1516, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_RECO_1516Trait04122017.csv")
+
+
+########### filtering out TTC and RTC plots in 2016 #################################################
+
+CO2_TTCvsRTC<- CO2data_1516 %>%
+  filter(year == "2016")
+
+ggplot(CO2_TTCvsRTC, aes(x=treatment, y= nee, col= cover))+
+  geom_boxplot()+
+  facet_wrap(~site)
+
+
+
+
+
+########Explore data after normalizing ###############################################################################################
+
+ggplot(RECO_Traitdata_1516, aes(factor(preclevel), Reco15, col=factor(year)))+
+  geom_boxplot()+
+  facet_grid(~templevel)
+
+ggplot(RECO_Traitdata_1516, aes(factor(templevel), Reco15, col=factor(year)))+
+  geom_boxplot()+
+  facet_grid(~preclevel)
+
+ggplot(GPP_Traitdata_1516, aes(factor(preclevel), GPP1000, col=factor(year)))+
+  geom_boxplot()+
+  facet_grid(~templevel)
+
+ggplot(GPP_Traitdata_1516, aes(factor(templevel), GPP1000, col=factor(year)))+
+  geom_boxplot()+
+  facet_grid(~preclevel)
+
+
+
 
 # Data spread per site 
-xyplot(Reco ~ block | factor(site), data = MergeLD,
+xyplot(Reco15 ~ tempK | factor(site), data = CO2_RECO_1516Trait,
          xlab = "Temp",ylab = "Reco" )
 
-xyplot(GPP ~ temp.x | factor(site), data = MergeLD,
+xyplot(GPP1500 ~ temp.x | factor(site), data = GPP_Traitdata_1516,
        xlab = "Temp", ylab = "GPP")
 
-xyplot(GPP ~ PAR.x  | factor(site), data = MergeLD,
+xyplot(GPP1500 ~ PAR.x  | factor(site), data = GPP_Traitdata_1516,
         xlab = "PAR", ylab = "GPP")
 
-q<- ggplot(MergeLD, aes(tempK, Reco, col=factor(templevel.x)))+
+q<- ggplot(CO2_GPP_2016, aes(tempK, Reco, col=factor(site)))+
   geom_point(shape= 16, size= 3.5)+
   geom_smooth(method = "glm", se = FALSE)+
   labs(x= "Temperature (K)", y = "Reco (?mol/m^2/s)", col="Temperature")+
-  scale_colour_manual(labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#FF6633"))+
+  #scale_colour_manual(labels=c("7.5?C","9.5?C","11.5?C"), values=c("#56B4E9","#009E73","#FF6633"))+
+  facet_wrap(~site)+
   theme(axis.title.y = element_text(size = rel(2), angle = 90))+
   theme(axis.title.x = element_text(size = rel(2)))+
   theme(axis.text = element_text(size= rel(1.5), colour = "black"))+
   theme(legend.title= element_text(size= rel(1.5), colour = "black"))+
-  theme(legend.text= element_text(size= rel(1.5), colour = "black"))+
-  theme(legend.position = c(.9, .15))
+  theme(legend.text= element_text(size= rel(1.5), colour = "black"))
+  #theme(legend.position = c(.9, .15))
 q
 
 
@@ -183,7 +418,7 @@ xyplot(GPP ~ starttime.x | factor(site), data = MergeLD,
 #fit Arheniusequation from Loyd&Taylor 1994<- A*exp(E0/T-T0)
 require(graphics)
 
-fit.nls<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=MergeLD)
+fit.nls<-nls((Reco~A*exp(-308.56/I(tempK-227.13))), start=c(A=0 ), data=CO2_RECO_1516Trait)
   fit.nls #A=412.1  residual sum-of-squares: 5727
   summary(fit.nls)
 
@@ -194,16 +429,16 @@ F1 <- fitted(fit.nls)
        xlab = "Fitted values",
        ylab = "Residuals",
        cex.lab = 1.5,
-       col = as.numeric(MergeLD$preclevel.x),
+       col = as.numeric(CO2_RECO_1516Trait$preclevel),
        abline(h = 0, lty = 2))  
 
-boxplot(E1 ~ site, data = MergeLD) # heterogeneity
+boxplot(E1 ~ site, data = CO2_RECO_1516Trait) # heterogeneity
 #Is the ratio of the largest and smalled variance > 4
-tapply(E1, INDEX = MergeLD$site, FUN = var)
+tapply(E1, INDEX = CO2_RECO_1516Trait$site, FUN = var)
 
-Recofit<-plot(Reco~tempK, data = MergeLD)
+Recofit<-plot(Reco~tempK, data = CO2_RECO_1516Trait)
   #lines(sort(tempK), fitted(fit.nls)[order(tempK)], col="red") #rough fit
-  newx<-seq(min(MergeLD$tempK), max(MergeLD$tempK), length=100) #create new x values for fitting line
+  newx<-seq(min(CO2_RECO_1516Trait$tempk), max(CO2_RECO_1516Trait$tempK), length=100) #create new x values for fitting line
   Reco.pred<-predict(fit.nls, newdata=data.frame(tempK=newx)) #predict line from newx values 
   lines(newx, Reco.pred, col="blue")
 
@@ -377,46 +612,7 @@ p<- ggplot(GPP.split, aes(factor(preclevel.x), GPPTlevel, fill= factor(templevel
 
     
     
-#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    #ANOVA AND REGRESSION & MULTIVARIATE ANALYSIS
-    
-  #Regression, ANOVA and Multivariate analysis on temp and prec effect on Reco and GPP, NON-NORMALIZED DATA
-    #linear regression
-    
-    tapply(MergeLD$Reco, list(MergeLD$templevel.x, MergeLD$preclevel.x), mean)
-    tapply(SubsetD$Reco15, list(SubsetD$templevel, SubsetD$preclevel), mean)
-    
-    ANOVA.Reco1<-aov(Reco15 ~ factor(templevel),data = SubsetD)
-    summary(ANOVA.Reco1)
-    plot(ANOVA.Reco1)
-    TukeyHSD(ANOVA.Reco1)
-    
-    ANOVA.Reco2<-aov(Reco15 ~ factor(preclevel),data = SubsetD)
-    summary(ANOVA.Reco2)
-    plot(ANOVA.Reco2)
-    TukeyHSD(ANOVA.Reco2)
-    
-    ANOVA.Reco3<-aov(Reco15 ~ factor(templevel)* factor(preclevel),data = SubsetD)
-    summary(ANOVA.Reco3)
-    plot(ANOVA.Reco3)
-    summary.lm(ANOVA.Reco3)
-    TukeyHSD(ANOVA.Reco3)
-    
-    #linear Regression
-    lm1<-lm(Reco15~templevel, data=SubsetD)
-    anova(lm1)  
-    plot(lm1)
-    
-    lm2<-lm(Reco15~preclevel, data=SubsetD)
-    anova(lm2)  
-    plot(lm2)
-    
-    # multiple regression
-    lm3<- lm(Reco15~templevel*preclevel, data=SubsetD)
-    anova(lm3)
-    
-    
     
 #/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////#AFTER REMOVAL
 #import datafiles after removal
@@ -518,48 +714,3 @@ Reco.grid+geom_boxplot(aes(fill=factor(treatment)))
 
  
     
-  
-
-  
-#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ 
-#import all sitefiles of 2015 pre&after removal
-  
-#import all datafiles
-read.allsitefiles<-function(file){
-    require(readxl) #install package
-    sites<-read_excel(file, sheet=1, col_names=TRUE, col_type= NULL) #read excel file
-    sites$dates<- as.Date(sites$dates, format="%d.%m.%y") 
-    sites<-sites[!is.na(sites$site), ] # remove rows with no data
-    #import data from files of site.files
-    sites.data<-lapply(1:nrow(sites), function(i){
-      r<-sites[i, ]
-      #   print(r)
-      import.everything(metaFile = r$meta, loggerFile = r$logger, tempFile = r$temp)
-    }) #process data from all files
-    unlist(sites.data, recursive = FALSE) # make on big list of data from all sites, without sublists
-}
-  
-data2015<-read.allsitefiles("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\CO2 flux\\RcodeCO2\\sitefiles2015.xlsx")
-  
- fluxcalc(data2015[[1]]) #calculate flux 1 plot
-  fluxdata2015<-do.call(rbind, lapply(data2015,fluxcalc)) #calculate flux all plots in all sites.
-  
-#add columns with precipitation and temperature level
-  tempV<-c(1,1,1,1,2,2,2,2,3,3,3,3)
-  names(tempV)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
-  #tempV[sitesdata2015$site]
-  fluxdata2015$templevel<-tempV[fluxdata2015$site]
-  
-  precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
-  names(precL)<-c("ULV","LAV","GUD","SKJ","ALR","HOG","RAM","VES","FAU","VIK","ARH","OVS")
-  fluxdata2015$preclevel<-precL[fluxdata2015$site]
-  
-#GPP calc  
-y<-format(fluxdata2015$starttime, format="%y-%m-%d")
-  fluxdata2015$date<-y #make new date column  
-  
-  subsetL2015<-subset(fluxdata2015, cover== "L")   
-  subsetD2015<-subset(fluxdata2015, cover== "D") 
-  mergeLD2015<- merge(subsetL2015, subsetD2015, by=c("site", "block", "treatment", "date"))
-  mergeLD2015$GPP<-mergeLD2015$nee.x- mergeLD2015$nee.y #NEE-Reco
-  

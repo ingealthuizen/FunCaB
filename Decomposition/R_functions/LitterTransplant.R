@@ -10,7 +10,7 @@ library(dplyr)
 library(reshape2)
 
 #load litter transplant data
-Litter<- read.table("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\Decomposition\\LitterTransplant.txt", header= TRUE, dec= ",")
+Litter<- read.table("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\Decomposition\\LitterTransplant_14082017.txt", header=TRUE, dec= ",")
 
 Litter$Time<- as.numeric(Litter$Time)
 Litter$BurialDate<- as.Date(Litter$BurialDate, format= "%d.%m.%Y")
@@ -62,28 +62,42 @@ Litter.climateLookup <- function(Litter, climate) {
 
 Litter<-Litter.climateLookup(Litter, climate)
 
+# add column "site" to add litter quality values to Litter data
+Litter$site<- Litter$BurialSite
+
+# Add litter quality data to Litter dataframe
+L_quality <- read_excel("O:\\FunCab\\Data\\FunCaB\\Decomposition\\Data\\Litter\\Litter_CN2016.xlsx")
 
 
-#remove empty or bad data points for analysis
-Litter_clean<- subset(Litter,is.na(Comment))
+L_mean.quality<- L_quality%>%
+  group_by(site) %>%
+  summarise(C = mean(C), N = mean(N), CNratio = mean(CNratio))
+
+Litter<- full_join(Litter, L_mean.quality, by ="site")
+
+
+#remove empty or bad data points for analysis #17 observations excluded
+Litter_clean<- subset(Litter,is.na(DataCheck))
 
 
 #calculate mean litter loss of same litter from each Donorsite and treatment and timestep
 DonorLitter<- Litter_clean%>%
-  group_by(DonorSite, Treatment, Timestep, Time) %>%
+  group_by(DonorSite, T_level, P_level, Treatment, Timestep, Time) %>%
   summarise(N.sample =length(W_loss), m.Loss = mean(W_loss), sd.Loss = sd(W_loss), se.Loss   = sd.Loss / sqrt(N.sample), m.remain = mean(W_remain), sd.remain = sd(W_remain), se.remain  = sd.remain / sqrt(N.sample))
-
-#change order of sites in dataframe
-DonorLitter$DonorSite <- factor(DonorLitter$DonorSite, levels = c("FAU","VIK","ARH","OVS","ALR","HOG","RAM","VES", "ULV","LAV","GUD",                                                                    "SKJ"))
 
 #calculate mean litter loss of different litter at Burial site and treatment and timestep
 BurialLitter<- Litter_clean%>%
-  group_by(BurialSite, Treatment, Timestep, Time) %>%
+  group_by(BurialSite, T_level, P_level, Treatment, Timestep, Time) %>%
   summarise(N.sample =length(W_loss), m.Loss = mean(W_loss), sd.Loss = sd(W_loss), se.Loss   = sd.Loss / sqrt(N.sample), m.remain = mean(W_remain), sd.remain = sd(W_remain), se.remain  = sd.remain / sqrt(N.sample))
 
-#change order of sites in dataframe
-BurialLitter$BurialSite <- factor(BurialLitter$BurialSite, levels=c("FAU","VIK","ARH","OVS","ALR","HOG","RAM","VES", "ULV","LAV","GUD",                                                                     "SKJ"))
 
+#change order of sites in dataframe
+DonorLitter$DonorSite <- factor(DonorLitter$DonorSite, levels = c("Fau","Vik","Arh","Ovs","Alr","Hog","Ram","Ves", "Ulv","Lav","Gud","Skj"))
+#change order of sites in dataframe
+BurialLitter$BurialSite<- factor(BurialLitter$BurialSite, levels=c("Fau","Vik","Arh","Ovs","Alr","Hog","Ram","Ves", "Ulv","Lav","Gud","Skj"))
+
+
+####### Exploratory plots ################
 # plots of %litter loss through time
 #comparing same litter at different sites so treatment
 ggplot(DonorLitter, aes(Time, col = factor(Treatment)))+
@@ -93,7 +107,7 @@ ggplot(DonorLitter, aes(Time, col = factor(Treatment)))+
   ggtitle("%lost of DONORlitter (same litter/different site)")
 
 # comparing different litter at same site
-ggplot(BurialLitter, aes(Timestep, col = factor(Treatment)))+
+ggplot(BurialLitter, aes(Time, col = factor(Treatment)))+
   geom_point(aes(y= m.Loss), size= 5, position = position_dodge(0.5))+
   geom_line(aes(y= m.Loss),size=1, position = position_dodge(0.5))+
   facet_wrap(~BurialSite)+
@@ -112,4 +126,43 @@ ggplot(BurialLitter, aes(Time, col = factor(Treatment)))+
   facet_wrap(~BurialSite)+
   ggtitle("%remain of DONORlitter (different litter/same site)")
 
- 
+
+ggplot(Litter_clean, aes(x= factor(Timestep), y= W_remain, col = factor(Treatment)))+
+  geom_boxplot()+
+  facet_wrap(~DonorSite)+
+  ggtitle("%remain of DONORlitter (same litter/different site)")
+
+ggplot(Litter_clean, aes(x= factor(Timestep), y= W_remain, col = factor(Treatment)))+
+  geom_boxplot()+
+  facet_wrap(~BurialSite)+
+  ggtitle("%remain of DONORlitter (different litter/same site)")
+
+
+library(ggthemes)
+ggplot(BurialLitter, aes(Time, group = factor(Treatment)))+
+  geom_errorbar(aes(ymin=m.remain-sd.remain, ymax=m.remain-sd.remain), width=.3, position = position_dodge(0.5)) +
+  geom_point(aes(y= m.remain, fill= factor(Treatment) , shape = factor(Treatment)), size= 5, position = position_dodge(0.5))+
+  geom_line(aes(y= m.remain, group= factor(Treatment), linetype= factor(Treatment)), size=1, position = position_dodge(0.5))+
+  facet_wrap(~BurialSite)+
+  labs(y= "  Litter remaining (%)", x = " Time (days) ")+
+  scale_fill_manual(values =c("green", "red","blue", "purple"),
+                    name="Treatment", 
+                    breaks=c("1", "2", "3", "4"), 
+                    labels = c("C", "WA", "WE", "WA+WE"),
+                    guide= TRUE)+
+  scale_colour_manual(values =c("#000000", "#000000", "#000000","#000000"),
+                      name="Treatment", 
+                      breaks=c("1", "2", "3", "4"), 
+                      labels = c("C", "WA", "WE", "WA+WE"),
+                      guide= TRUE)+
+  scale_shape_manual(values = c(24, 21, 22, 25),
+                      name="Treatment", 
+                      breaks=c("1", "2", "3", "4"), 
+                      labels = c("C", "WA", "WE", "WA+WE"),
+guide= TRUE)+
+  theme_few()+
+  theme(axis.title.x=element_text(size = 25), axis.text.x=element_text(size = 22), axis.title = element_text(size = 25), axis.text.y = element_text(size = 22), legend.position = "none", strip.text.x = element_blank())
+
+
+
+  

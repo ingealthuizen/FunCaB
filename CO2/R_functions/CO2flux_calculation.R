@@ -4,18 +4,18 @@ fluxcalc<-function(input){
   # constants specification for chamber
   
   height= 0.4 #m
-  area= 0.25*0.25 #m^2
-  vol= area*height # m^3
+  area= 0.25*0.25 #m^2 plot area
+  vol= area*height # m^3 chamber volume
   R= 8.31442 # m^3 Pa/K/mol
   
   # flux
-  time<-input$dat$datetime
-  time<-time-time[1]
-  time<-unclass(time)
+  time<-input$dat$time
+  #time<-time-time[1]
+  #time<-unclass(time)
   co2<-input$dat$CO2 # umol/mol
-  h2O<-8 #mean(input$H2O$value) estimated value mmol/mol
+  h2O<-12 #mean(input$H2O$value) estimated value mmol/mol
   PAR<-mean(input$dat$PAR, na.rm = TRUE)
-  press<- 1010 #input$meta$airpress # kPA estimated value based on altitude site
+  press<- 101 #input$meta$airpress # kPA estimated value based on altitude site
   temp<- input$dat$temp[1] # C 
   
   #ambient
@@ -26,7 +26,7 @@ fluxcalc<-function(input){
   inter<- coef(CO2.lm)[1]
   dcdt<- coef(CO2.lm)[2]
   rsqd<- summary(CO2.lm)$r.sq
-  nee<- -((vol*press)*(1010-h2O)*dcdt/ (R*area*(temp+273.15))) # D(Reco)= negative L(NEE)=positive
+  nee<- -(vol*press*(1010-h2O)*dcdt)/ (R*area*(temp+273.15))# D(Reco)= negative L(NEE)=positive
   
   #	 Non-Linear, Exponential Regression (Leaky Fit Model) 
   #  cnot = cprime[3]#almost certainly wrong

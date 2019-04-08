@@ -3,7 +3,6 @@ source("CO2/R_functions/import_process_CO2data.R")
 source("CO2/R_functions/CO2flux_calculation.R")
 source("CO2/R_functions/CO2_plot.R")#give exact location of R functions.R file
 
-
 #ULV 02-08-2016_1
 ULV020816_1<-import.everything(
   meta="O:\\FunCab\\Data\\co2flux2016\\metadata files\\02082016_ULV_ch1_1.txt",

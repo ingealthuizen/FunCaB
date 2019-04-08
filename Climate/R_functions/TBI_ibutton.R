@@ -1,9 +1,7 @@
 # Climate data ibutton TBI
 library(readxl) #require packages
-library(dplyr) 
-library(tidyr) 
-library(ggplot2)
-library(reshape2)
+library(tidyverse)
+#library(reshape2)
 library(stringr)
 library("lubridate")
 
@@ -17,7 +15,7 @@ TBI_ibut2014$year<-format(TBI_ibut2014$datetime, "%Y")
 # Calculate average soilTemp per day for each logger
 TBI_day_sT<-TBI_ibut2014 %>%
             group_by(day, month, year) %>%
-            summarise_each(funs(mean(., na.rm =TRUE))) %>%
+            summarise_all(funs(mean(., na.rm =TRUE))) %>%
             arrange(month)
 
 # rounding of temperature values to 2 dec and removing datetime column
@@ -29,27 +27,21 @@ is.num <- sapply(TBI_day_sT, is.numeric)
 TBI_day_sT<-   TBI_day_sT[ -c(6, 26, 27)]
 
 # Transforming data into long format and renaming variables > logger and splitting them in site and block
-Day_sT<- melt(TBI_day_sT, id.vars = c("month", "day", "year"))
-  Day_sT$date<- as.Date(with(Day_sT, paste(day, month, year, sep = "-")), "%d-%m-%Y")
-
-Day_sT<-rename(Day_sT, logger = variable)
-  Day_sT$logger<- as.character(Day_sT$logger)
-
-site<-as.data.frame(do.call(rbind, strsplit(Day_sT$logger, "-")))
-  Day_sT<- bind_cols(Day_sT, site)
-  Day_sT<-rename(Day_sT, Site = V1, Block = V2)
+Day_sT<- gather(TBI_day_sT, key = logger, value = value, -month, -day, -year) %>% 
+  mutate(date = ymd(paste(year, month, day))) %>% 
+  separate(logger, into = c("site","block"), sep = "-") 
 
 # calculate average soilTemp acros site based on the different ibutton loggers
 grid_sT<-Day_sT %>%
-          group_by(day, month, year, date, Site) %>%
+          group_by(day, month, year, date, site) %>%
           summarise(mn_sT = mean(value, na.rm =TRUE)) %>%
-          arrange(Site, month)
+          arrange(site, month)
 
 grid_sT<- grid_sT[complete.cases(grid_sT),]
 
 # retrieve start and end time of TBI incubation time 
 TBI_time<-grid_sT %>%
-          group_by(Site) %>%
+          group_by(site) %>%
           summarise(BurialDate = first(date), RecoveryDate = last(date))
   
 
@@ -76,7 +68,7 @@ TBI.climateLookup <- function(TBI_time, climate) {
     outMat
   }
   # Apply the climate retrieval function to each site and compress into one giant data frame
-  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature"))
+  tempData <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature"))
   
   tempData
 }
@@ -88,9 +80,15 @@ Grid.Temp<-TBI.climateLookup(TBI_time, climate)
 load("O:/SeedClim-Climate-Data/Daily.Temperature_2008-2016.RData")
 
 # select only loggers recording soil temperature
-climStation_sT<- filter(dailyTemperature, logger == "tempsoil")
-climStation_sT<- rename(climStation_sT, Date = date, Temperature = value, Site = site)
-climStation_sT$Site<- as.factor(climStation_sT$Site)
+climStation_sT<- filter(dailyTemperature, logger == "tempsoil") %>% 
+  rename(Temperature = value) %>% 
+  mutate(site = as.factor(site))
+
+climStation_airT<- filter(dailyTemperature, logger == "temp200cm")
+climStation_airT<- rename(climStation_airT, Date = date, Temperature = value, Site = site)
+climStation_airT$Site<- as.factor(climStation_airT$Site)
+climStation_airT$airT<- climStation_airT$Temperature
+
 
 # load TBI data and select unique burialtime periods 
 TBI<-read_excel("O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_141516new07082017.xlsx")
@@ -107,25 +105,30 @@ TBI_times<- TBI_times[complete.cases(TBI_times),]
 TBI_times$RecoveryDate<- as.Date(TBI_times$RecoveryDate)
 
 # create dataframe with soilTemperatures of all sites measured by climate stations
+climStation_sT$Date <- climStation_sT$date
 Station.Temp<-TBI.climateLookup(TBI_times, as.data.frame(climStation_sT))
 Station.Temp$day<-format(Station.Temp$Date, "%d") 
 Station.Temp$month<-format(Station.Temp$Date, "%m") 
 Station.Temp$year<-format(Station.Temp$Date, "%Y")
 
+Station.airTemp<-TBI.climateLookup(TBI_times, as.data.frame(climStation_airT))
+Station.airTemp$day<-format(Station.airTemp$Date, "%d") 
+Station.airTemp$month<-format(Station.airTemp$Date, "%m") 
+Station.airTemp$year<-format(Station.airTemp$Date, "%Y")
+
 # create dataframe with soilTemperatures of all sites from gridded data
 Gridded.Temp <-TBI.climateLookup(TBI_times, climate)
-
 Gridded.Temp$day<-format(Gridded.Temp$Date, "%d") 
 Gridded.Temp$month<-format(Gridded.Temp$Date, "%m") 
 Gridded.Temp$year<-format(Gridded.Temp$Date, "%Y")
 Gridded.Temp$yday<- strptime(Gridded.Temp$Date, "%Y-%m-%d")$yday+1
 
 
-
 # model soiltemp from gridded data and climate station soiltempsensor
 # maybe only use summer months 4-10?
-all_TEMP <- left_join(climate, climStation_sT, by= c("Site" = "Site", "Date" = "Date"))
-all_TEMP <- left_join(all_TEMP, grid_sT, by= c("Site" = "Site", "Date" = "date") )
+all_TEMP <- left_join(climate, climStation_airT, by= c("Site" = "Site", "Date" = "Date"))
+all_TEMP <- left_join(all_TEMP, climStation_sT, by= c("Site" = "site", "Date" = "Date"))
+all_TEMP <- left_join(all_TEMP, grid_sT, by= c("Site" = "site", "Date" = "date") )
 
 
 modelclimate <- all_TEMP %>%
@@ -160,6 +163,9 @@ TBI.climateLookup <- function(TBI_time, climate) {
   # Apply the climate retrieval function to each site and compress into one giant data frame
   gridTemp <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature.x"))
 stationTemp <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature.y"))
+stationairTemp <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "Temperature.z"))
+
+
 modelTemp<- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "new_T"))
 ibutTemp <- do.call(rbind, apply(X = as.matrix(cbind(as.character(TBI_time$BurialDate), as.character(TBI_time$RecoveryDate), as.character(TBI_time$Site))), FUN = climRetrieval, MARGIN = 1, climate = climate, colName = "mn_sT"))
 
@@ -196,7 +202,7 @@ AllTemp<- cbind (AllTemp, Year = year(AllTemp$Date))
 
 mean_Temp<-AllTemp %>%
             group_by(Year, Site)%>%
-            summarise(model_T = mean(Temperature.x, na.rm =TRUE))
+            summarise(grid_airTemp = mean(Temperature.x, na.rm =TRUE))
 
 #mean modelTemp for Skj is systematically higher than other alpine sites, replace it with gridded Temp value
 mean_Temp$model_T[9]= 10.08 # Skj 2014

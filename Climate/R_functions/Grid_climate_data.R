@@ -24,12 +24,12 @@ monthlyClimate$Month<-numMonth(monthlyClimate$Month)
 
 
 #select data for different loggers for period 2014-2016
-Temperature_Grid<- filter(monthlyClimate, Logger=="Temperature", Year>2013)
-Temperature_Grid<- subset(Temperature_Grid, Month>=5 & Month<10)
-Precipitation_Grid<- filter(monthlyClimate, Logger=="Precipitation", Year>2013)
-Precipitation_Grid<- subset(Precipitation_Grid, Month>=5 & Month<10)
-Airmoisture_Grid<- filter(monthlyClimate, Logger=="RelAirMoisture", Year>2013)
-Airmoisture_Grid<- subset(Airmoisture_Grid, Month>=5 & Month<10)
+Temperature_Grid<- filter(monthlyClimate, Logger=="Temperature", Year>2014)
+Temperature_Grid<- subset(Temperature_Grid, Month>=6 & Month<10)
+Precipitation_Grid<- filter(monthlyClimate, Logger=="Precipitation", Year>2014)
+Precipitation_Grid<- subset(Precipitation_Grid, Month>=6 & Month<10)
+Airmoisture_Grid<- filter(monthlyClimate, Logger=="RelAirMoisture", Year>2014)
+Airmoisture_Grid<- subset(Airmoisture_Grid, Month>=6 & Month<10)
 
 #calculate means over summer period
 T_mean<- Temperature_Grid %>%
@@ -42,6 +42,7 @@ Prec_total<- Precipitation_Grid %>%
              summarise(total_P = sum(value))  
 
 
-#average_climate<- right_join(T_mean, Prec_total, by = "Site" & "Year")
+# calculate mean T and Prec for different TBI incubation times. Based on TBI$Burialdate and TBI$Recoverydate
+
 
 

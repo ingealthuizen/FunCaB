@@ -14,6 +14,23 @@ ibut.data<-read.ibutton("O:\\FunCab\\Data\\FunCaB\\Climate\\Data\\ibutton logger
 ggplot(ibut.data, aes(datetime,temp))+
   geom_line()
 
+#work in progress
+#loop for loading data from ibuttons
+read.ibutfiles<-function(file){
+  ibuttons<-read_excel(file, sheet=1, col_names=TRUE, col_type= NULL) #read excel file
+   #import data from files of site.files
+  soiltemp<-lapply(1:nrow(sites), function(i){
+    r<-ibuttons[i, ]
+    #   print(r)
+    read.ibutton(ibut = r$file)
+  }) #process data from all files
+  unlist(sites.data, recursive = FALSE) # make on big list of data from all sites, without sublists
+}
+
+
+ibutton_data<-readibut_files("CO2/Data/data_files_2015_pre.xlsx")
+
+
 #make loop to load ibutton data of controls per site and plot it in same graph with different colors
 
 ibut.data$day<-as.numeric(format(ibut.data$datetime, format="%d")) 

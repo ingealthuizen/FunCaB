@@ -1,5 +1,8 @@
 #TBI analysis
-
+library(nlme)
+library(lme4)
+library(MASS)
+library(car)
 # TBI exploring data 
 source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 
@@ -13,7 +16,10 @@ source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\Highstat_library.R")
 
 # possible outlier Vik k= 0.26 ,| TBI_variables$k>0.025
 
-
+# add sample numbering to dataframe
+TBI_variables$ID <- seq.int(nrow(TBI_variables))
+#change year to factor
+TBI_variables$year<- as.factor(TBI_variables$year)
 
 # calculate k based on mean S per site per year, first need to recalculate ar =predicted labile fraction
 TBI_variables<-TBI_variables %>% 
@@ -25,13 +31,16 @@ TBI_variables<-TBI_variables %>%
 TBI_variables<-TBI_variables %>% 
                           mutate(new.k = log(new.Ar/(Wt-(1-new.Ar)))/Time)
 
+TBI_variables$Gmass.remain<- (TBI_variables$`FinalWeight Gtea`)/TBI_variables$`InitialWeight Gtea`
+TBI_variables$Rmass.remain<- (TBI_variables$`FinalWeight Rtea`)/TBI_variables$`InitialWeight Rtea`
+
+#save(TBI_variables, file = "O:\\FunCab\\Data\\Decomposition\\TBI\\TBI_variables.RData")
+
 # remove outliers (2 measurements) bigger than 0.20 + large difference with other k at same site same year
 #TBI_variables<-TBI_variables[!(TBI_variables$S>0.6 |TBI_variables$S<0 |TBI_variables$k<=0 | TBI_variables$k>0.020 ),] 
 
 #| TBI_variables$Time<61 to leave out 8 pairs of tea bags from LAV which were only incubated 60 days, however SKJ 2014 only 65 days
 
-#change year to factor
-TBI_variables$year<- as.factor(TBI_variables$year)
 
 #remove rows with NA for k
 #TBI_variables<-TBI_variables[!is.na(TBI_variables$k),]
@@ -39,6 +48,21 @@ TBI_variables$year<- as.factor(TBI_variables$year)
 #change names of Temperature and precipitation levels
 levels(TBI_variables$Temp.x) <- c("ALP", "SUB", "BOR")
 levels(TBI_variables$Prec.x) <- c("Prec1", "Prec2", "Prec3", "Prec4")
+
+### Mean decomposition rates#######
+TBI_means<- TBI_variables%>%
+  group_by(year, site)%>%
+  summarise_each(funs(mean(., na.rm =TRUE)))
+
+#add columns with precipitation and temperature level
+tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
+names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+#tempV[overviewsitesdata$site]
+TBI_means$Temp.x<-tempV[TBI_means$site]
+
+precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
+names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
+TBI_means$Prec.x<-precL[TBI_means$site]
 
 # create subsets for different Precipitation levels of decompostion data
 TBI_P1<- TBI_variables[(TBI_variables$Prec.x == "1"),]
@@ -61,13 +85,13 @@ pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 
 
 #conditional boxplot to check for collinearity between a continuous covariate and a categorical 
-boxplot(modelTemp ~ factor(Temp.x), 
+boxplot(gridTemp ~ factor(Temp.x), 
         data = TBI_variables)
 
 boxplot(gridPrec ~ factor(Prec.x), 
         data = TBI_variables)
 
-boxplot(modelTemp ~ factor(year), 
+boxplot(gridTemp ~ factor(year), 
         data = TBI_variables)
 
 boxplot(Temp.Var ~ factor(year), 
@@ -79,7 +103,7 @@ boxplot(Temp.Var ~ factor(year),
 ## Relationships Y vs X
 
 # check for relationships
-MyVar <- c("k", "S", "modelTemp", "gridPrec", "Temp.x", "Prec.x", "year", "pH", "AvailN", "soil_C.", "Litter.C", "Plant_CN", "Root", "soil_C.N", "Litter.CN", "soil_moist", "Total", "P_div", "M_Shannon.H")
+MyVar <- c("k", "S", "gridTemp", "gridPrec", "Temp.x", "Prec.x", "year", "pH", "AvailN", "soil_C.", "Litter.C", "Plant_CN", "Root", "soil_C.N", "Litter.CN", "soil_moist", "Total", "P_div", "M_Shannon.H")
 
 pairs(TBI_variables[, MyVar], lower.panel = panel.cor)
 
@@ -93,38 +117,28 @@ boxplot(k ~ factor(year),
 
 
 #Plot every continuous covariate versus Y
-MyX  <- c("modelTemp", "gridPrec", "Temp.Var","Prec.CV", "pH", "AvailN", "Plant_CN", "soil_CN", "Litter.CN", "Total", "P_div", "M_Shannon.H")
+MyX  <- c("gridTemp", "gridPrec", "Temp.Var","Prec.CV", "pH", "AvailN", "Plant_CN", "soil_CN", "Litter.CN", "Total", "P_div", "M_Shannon.H")
 Myxyplot(TBI_variables, MyX, "k", MyYlab = "Decomposition (k)")
 
 
 
 #==============================================================================================================================
 
-x<-TBI_variables%>%
-  group_by( year)%>%
-  summarize(mean.k= mean(k),mean.S= mean(S), mean.T = mean(modelTemp), mean.P = mean(gridPrec))
-
-tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
-names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
-
-x$templevel<-tempV[x$site]
-precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
-names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
-x$preclevel<-precL[x$site]
 
 #calculate mean +Sd for temp and prec per year
-TBI_climate_M<-TBI_variables%>%
-  group_by(site,year) %>%
-  summarise(m.T = mean(gridTemp), m.P = mean(gridPrec))
+#
+TBI_grid<- TBI_variables%>%
+  group_by(site, year) %>%
+  summarise(m.T = max(gridTemp), m.P = max(gridPrec), m.k = mean(new.k, na.rm =TRUE), m.S = mean(S, na.rm =TRUE), sd.k = sd(new.k, na.rm =TRUE), sd.S = sd(S, na.rm =TRUE), N.k =length(na.omit(new.k)), N.S = length(na.omit(S)), se.k   = sd.k / sqrt(N.k), se.S   = sd.S / sqrt(N.S))
 
 tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
 names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
 #tempV[overviewsitesdata$site]
-TBI_climate_M$templevel<-as.factor(tempV[TBI_climate_M$site])
+TBI_grid$templevel<-as.factor(tempV[TBI_grid$site])
 
 precL<-c(1,2,3,4,1,2,3,4,1,2,3,4)
 names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
-TBI_climate_M$preclevel<-as.factor(precL[TBI_climate_M$site])
+TBI_grid$preclevel<-as.factor(precL[TBI_grid$site])
 
 
 ####### Two-way ANOVA tests for difference in climate #################################
@@ -132,24 +146,27 @@ aov.T<- aov(m.T ~ factor(year)*templevel, data=TBI_grid) #
 summary(aov.T)
 
 # test the pairwise comparison between years for temperature
-pairwise.t.test(TBI_grid$m.T, TBI_grid$year, p.adj = "none")
+pairwise.t.test(TBI_grid$m.T, TBI_grid$year, paired=TRUE, pool=F, p.adj = "holm") #holm adjustment
 # test the pairwise comparison between templevel for temperature
-pairwise.t.test(TBI_grid$m.T, TBI_grid$templevel, p.adj = "none")
+pairwise.t.test(TBI_grid$m.T, TBI_grid$templevel, paired=TRUE, pool=F, p.adj = "holm") #holm adjustment
 
 aov.P<- aov(m.P ~ factor(year)*preclevel, data=TBI_grid)
 summary(aov.P)
 
 # test the pairwise comparison between years for temperature
-pairwise.t.test(TBI_grid$m.P, TBI_grid$year, p.adj = "none")
+pairwise.t.test(TBI_grid$m.P, TBI_grid$year, paired=TRUE, pool=F, p.adj = "holm")
 # test the pairwise comparison between templevel for temperature
-pairwise.t.test(TBI_grid$m.P, TBI_grid$preclevel, p.adj = "none")
+pairwise.t.test(TBI_grid$m.P, TBI_grid$preclevel, paired=TRUE, pool=F, p.adj = "holm")
+
+
 
 ####### Two-way ANOVA tests for difference in environment #################################
+
 site_variables<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
 site_variables$Temp<- as.factor(site_variables$Temp)
 site_variables$Prec<- as.factor(site_variables$Prec)
-#boxplot(pH~ factor(Temp), data = site_variables)
-#boxplot(pH~ factor(Prec), data = site_variables)
+boxplot(pH~ factor(Temp), data = site_variables)
+boxplot(pH~ factor(Prec), data = site_variables)
 #boxplot(AvailN~ factor(Temp), data = site_variables)
 #boxplot(AvailN~ factor(Prec), data = site_variables)
 #boxplot(Plant_CN~ factor(Temp), data = site_variables)
@@ -174,15 +191,21 @@ summary(aov.N)
 #no interaction, Temp 0.07, Prec not sign
 
 # Plant C:N ratio
-aov.P_CN <- aov(Plant_CN ~ Temp*Prec, data=site_variables)
+boxplot(Plant_CN~ factor(Prec), data = site_variables)
+aov.P_CN <- aov(Plant_CN ~ factor(Temp)*factor(Prec), data=site_variables)
 summary(aov.P_CN)
 #interaction, Temp not sign, Prec ***
 pairwise.t.test(site_variables$Plant_CN, site_variables$Prec, p.adj = "none")
 
 # Soil C:N ratio
 # omit rows with NA for C:N
-site_variables<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
-site_variables_CN<-na.omit(site_variables)
+site_variables_CN<-read.table("O:/FunCab/Data/FunCaB/Other/Data_Serge/Variable_soildata.txt", header= TRUE, dec= ",")
+site_variables_CN<-na.omit(site_variables_CN)
+site_variables_CN$Temp<- as.factor(site_variables_CN$Temp)
+site_variables_CN$Prec<- as.factor(site_variables_CN$Prec)
+
+boxplot(soil_C.N~ factor(Prec), data = site_variables_CN)
+boxplot(soil_N.~ factor(Prec), data = site_variables_CN)
 aov.S_CN <- aov(soil_C.N ~ Temp*Prec, data=site_variables_CN)
 summary(aov.S_CN)
 #no interaction, Temp *, Prec ***
@@ -207,6 +230,7 @@ P.diversity_data<-P.diversity_data %>%
   group_by(site, turfID, Temp, Prec) %>%
   summarise(P_div = mean(diversity, na.rm =TRUE), P_even = mean(evenness, na.rm =TRUE)) 
 
+boxplot(P_div~ factor(Temp), data = P.diversity_data)
 aov.P_div <- aov(P_div ~ Temp*Prec, data=P.diversity_data)
 summary(aov.P_div)
 #interaction***, templevel***, preclevel*
@@ -222,7 +246,8 @@ Litter_data<- Litter_data %>%
 Litter_data$templevel<-as.factor(tempV[Litter_data$site])
 Litter_data$preclevel<-as.factor(precL[Litter_data$site])
 
-#boxplot(Litter.CN~ factor(preclevel), data = Litter_data)
+boxplot(Litter.CN~ factor(templevel), data = Litter_data)
+boxplot(Litter.CN~ factor(preclevel), data = Litter_data)
 aov.L_CN <- aov(Litter.CN ~ templevel*preclevel, data=Litter_data)
 summary(aov.L_CN )
 #interaction Temp*** Prec***
@@ -232,33 +257,64 @@ pairwise.t.test(Litter_data$Litter.CN, Litter_data$preclevel, p.adj = "none")
 plot(site_variables$soil_C.N, site_variables$Plant_CN)
 
 
-###### One-way ANOVA for testing difference in k and S across years###########
-aov.k <- aov(new.k ~ factor(year), data=TBI_variables)
-#plot(aov.k)
-summary(aov.k)
-TukeyHSD(aov.k)
-# significant different k for years
+###### mixed effect model to test effect of year on k and S troughout grid###########
+library(MuMIn)
+lme.null<-lme(new.k ~ 1, random= ~+1|site, na.action=na.omit, data= TBI_variables)
+lme.year<-lme(new.k ~ factor(year), random= ~+1|site, na.action=na.omit, data= TBI_variables)
+anova(lme.null, lme.year )
+summary(lme.year)
+r.squaredGLMM(lme.year) # Calculate conditional and marginal coefficient of determination (marginal = variance explained by fixed factors, conditional - variance explained by fixed and random factors)
 
-aov.S <- aov(S ~ factor(year), data=TBI_variables)
-#plot(aov.S)
-summary(aov.S)
-TukeyHSD(aov.S)
-# significant different S for years
+lme.null<-lmer(new.k ~ 1 +(1|site), na.action=na.omit, data= TBI_variables)
+lme.year<-lmer(new.k ~ factor(year) + (1|site), na.action=na.omit, data= TBI_variables)
+anova(lme.null, lme.year )
+summary(lme.year)
 
-TBI_variables %>%
-  group_by(year) %>%
-  summarise(new.k = mean(new.k, na.rm =TRUE), S = mean(S, na.rm =TRUE))
+
+lme.null<-lmer(S ~ 1 +(1|site), na.action=na.omit, data= TBI_variables)
+lme.year<-lmer(S ~ factor(year) + (1|site), na.action=na.omit, data= TBI_variables)
+anova(lme.null, lme.year )
+summary(lme.year)
+
+lme.year<-lme(S ~ factor(year), random= ~+1|site, na.action=na.omit, data= TBI_variables)
+anova(lme.year)
+summary(lme.year)
+r.squaredGLMM(lme.year)
+
+lme.site<-lme(new.k ~ factor(site), random= ~+1|year, na.action=na.omit, data= TBI_variables)
+anova(lme.site)
+summary(lme.site)
+r.squaredGLMM(lme.year)
+
+lme.site<-lme(S ~ factor(site), random= ~+1|year, na.action=na.omit, data= TBI_variables)
+anova(lme.site)
+summary(lme.site)
+r.squaredGLMM(lme.year)
+
+
+install.packages("MuMIn")
+library(MuMIn)
+r.squaredGLMM(lme.year)
+
+1-var(residuals(lme.year))/(var(model.response(model.frame(lme.year))))
+
+r2.corr.mer <- function(m) {
+  lmfit <-  lm(model.response(model.frame(m)) ~ fitted(m))
+  summary(lmfit)$r.squared
+}
+r2.corr.mer(lme.year)
 
 ###### Two-way ANOVA for testing differences in k and S across temp and prec levels for each year###########
-# create subsets for different years of decompostion data
-TBI_2014<- TBI_variables[(TBI_variables$year == 2014),]
-TBI_2015<- TBI_variables[(TBI_variables$year == 2015),]
-TBI_2016<- TBI_variables[(TBI_variables$year == 2016),]
+
 
 aov.k <- aov(new.k ~ Prec.x*Temp.x, data=TBI_variables)
 summary(aov.k)
 
-##### linear regression for Green and Rooibos tea for different years
+
+# create subsets for different years of decompostion data
+TBI_2014<- TBI_variables[(TBI_variables$year == 2014),]
+TBI_2015<- TBI_variables[(TBI_variables$year == 2015),]
+TBI_2016<- TBI_variables[(TBI_variables$year == 2016),]
 
 year_lm<-lm( k~ modelTemp, data= TBI_2015)
 summary(year_lm) 
@@ -276,8 +332,23 @@ TBI_ALP<- TBI_variables[(TBI_variables$Temp.x == "1"),]
 TBI_SUB<- TBI_variables[(TBI_variables$Temp.x == "2"),]
 TBI_BOR<- TBI_variables[(TBI_variables$Temp.x == "3"),]
 
+TBIm_ALP<- TBI_means[(TBI_means$Temp.x == "1"),]
+TBIm_SUB<- TBI_means[(TBI_means$Temp.x == "2"),]
+TBIm_BOR<- TBI_means[(TBI_means$Temp.x == "3"),]
+
+TBI_P1<- TBI_variables[(TBI_variables$Prec.x == "1"),]
+TBI_P2<- TBI_variables[(TBI_variables$Prec.x  == "2"),]
+TBI_P3<- TBI_variables[(TBI_variables$Prec.x  == "3"),]
+TBI_P4<- TBI_variables[(TBI_variables$Prec.x  == "4"),]
+
+
+TBIm_P1<- TBI_means[(TBI_means$Prec.x == "1"),]
+TBIm_P2<- TBI_means[(TBI_means$Prec.x == "2"),]
+TBIm_P3<- TBI_means[(TBI_means$Prec.x == "3"),]
+TBIm_P4<- TBI_means[(TBI_means$Prec.x == "4"),]
+
 # linear regression decomp rate k with temp
-k_lm<-lm( new.k~ gridPrec+, data= TBI_BOR)
+k_lm<-lm( new.k~ gridPrec, data= TBI_BOR)
 summary(k_lm)
 
 #TBI_ALL T r2= 0.002 p=0.43
@@ -290,7 +361,20 @@ summary(k_lm)
 #TBI_SUB P r2=0.13 p<0.001
 #TBI_BOR P r2= 0.07 p<0.05
 
-# Test for effect of Temperature level on relation with k
+k_lm<-lm( new.k~ gridTemp, data= TBI_P1)
+summary(k_lm)
+
+#TBI_P1 T r2=  p=
+#TBI_P2 T r2=  p=
+#TBI_P3 T r2=  p=
+#TBI_P4 T r2=  p<0.001
+
+#TBI_P1 P r2=  p=0.9
+#TBI_P2 P r2=  p=0.8
+#TBI_P3 P r2=  p<0.001
+#TBI_P4 P r2=  p=0.2
+
+######## Test for effect of Temperature level on relation with k
 summary(lm(new.k~ gridTemp+Temp.x, data= TBI_variables))
 summary(lm(new.k~ gridPrec+Temp.x, data= TBI_variables))
 
@@ -308,6 +392,19 @@ summary(S_lm)
 #TBI_SUB P r2=0.08  p<0.01
 #TBI_BOR P r2= 0.02 p=0.13
 
+S_lm<-lm( S ~ gridTemp, data= TBI_P1)
+summary(S_lm)
+
+#TBI_P1 T r2=  p=
+#TBI_P2 T r2=  p=
+#TBI_P3 T r2=  p=
+#TBI_P4 T r2=  p=
+
+#TBI_P1 P r2=  p=
+#TBI_P2 P r2=  p=
+#TBI_P3 P r2=  p=
+#TBI_P4 P r2=  p=
+
 # Test for effect of Temperature level on relation with k
 summary(lm(S ~ gridTemp+Temp.x, data= TBI_variables))
 summary(lm(S ~ gridPrec+Temp.x, data= TBI_variables))
@@ -319,11 +416,25 @@ ggplot(TBI_variables, aes(modelTemp, k, col= factor(Prec.x)))+
   geom_point()+
   geom_smooth(method = "lm")
 
+### relation environment on k and S 
+summary(lm(k ~ pH, data= TBI_means))
+summary(lm(k ~ P_div, data= TBI_means))
+summary(lm(k ~ soil_C.N, data= TBI_means))
+summary(lm(S ~ Litter.CN, data= TBI_means))
+
+
+summary(lm(k ~ pH, data= TBIm_BOR)) # not sign
+summary(lm(k ~ P_div, data= TBIm_BOR)) # sign in SUB r2 0.32 p< 0.05
+summary(lm(k ~ soil_C.N, data= TBIm_BOR))
+summary(lm(S ~ Litter.CN, data= TBIm_ALP))
+
+summary(lm(k ~ pH, data= TBIm_P4)) # 
+summary(lm(k ~ P_div, data= TBIm_P4)) #
+summary(lm(k ~ soil_C.N, data= TBIm_P4))
+summary(lm(S ~ Litter.CN, data= TBIm_P4))
+
 ########### Spatial climate effect - linear mixed-effects model ###################################################
-library(nlme)
-library(lme4)
-library(MASS)
-library(car)
+
 hist(TBI_BOR$k) # check normal distribution k and S for total and different temp levels
 TBI_variables$year<-as.factor(TBI_variables$year)
 
@@ -332,6 +443,7 @@ M0<- lme(new.k~ gridTemp*gridPrec+factor(Temp.x)*factor(Prec.x), random= ~+1|yea
 M1<- lme(new.k~ gridTemp+gridPrec+factor(Temp.x)*factor(Prec.x), random= ~+1|year/site, data= TBI_variables, na.action=na.omit)
 anova(M0)
 anova(M1)# best model
+r.squaredGLMM(M0)
 
 # residuals check
 plot(fitted(M1), resid(M1))
@@ -401,6 +513,7 @@ TBI_means$Prec.x<-precL[TBI_means$site]
 # check probability distribution
 qqp(TBI_means$new.k, "norm") # is normally distributed
 
+
 #year and site random, fixed temp and prec
 MMfull<- lme(new.k~  factor(Temp.x) + factor(Prec.x) + gridTemp + gridPrec + pH + P_div , random= ~+1|year/site, 
           data= TBI_means, method = "REML")
@@ -426,6 +539,8 @@ TBI_means<- TBI_variables%>%
   group_by(year, site)%>%
   summarise_each(funs(mean(., na.rm =TRUE)))
 
+TBI_means$year<- as.factor(TBI_means$year)
+
 #add columns with precipitation and temperature level
 tempV<-c(3,3,3,3,2,2,2,2,1,1,1,1)
 names(tempV)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh","Ovs")
@@ -437,15 +552,59 @@ names(precL)<-c("Ulv","Lav","Gud","Skj","Alr","Hog","Ram","Ves","Fau","Vik","Arh
 TBI_means$Prec.x<-precL[TBI_means$site]
 
 
-K_lm<-lm( k ~ pH + P_div  + soil_C.N  , data= TBI_means) #+ Litter.CN + factor(Temp.x) + factor(Prec.x)
-summary(K_lm)
-step(K_lm)
+############# Variance explained by year and space ON COMPLETE DATASET
 
-K_lm2<-lm( k ~  gridPrec + factor(year)  , data= TBI_means) #modelTemp 
-summary(K_lm2)
-step(K_lm2)
+year_lm<-lm( new.k ~ year, data= TBI_variables) 
+summary(year_lm)
+af<-anova(year_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
 
-#Variance decomposition between years and sites
+year_lm<-lm( S ~ year, data= TBI_variables) 
+summary(year_lm)
+af<-anova(year_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+site_lm<-lm( new.k ~ site*year, data= TBI_variables) #need to put in interaction with year to account for temporal structure
+summary(site_lm)
+af<-anova(site_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+site_lm<-lm( S ~ site*year, data= TBI_variables) 
+summary(site_lm)
+af<-anova(site_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+############# Variance analysis  ON MEAN K AND S
+
+year_lm<-lm( new.k ~ year, data= TBI_means) 
+summary(year_lm)
+af<-anova(year_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+year_lm<-lm( S ~ year, data= TBI_means) 
+summary(year_lm)
+af<-anova(year_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+site_lm<-lm( new.k ~ factor(Temp.x)*factor(Prec.x), data= TBI_means) 
+summary(site_lm)
+af<-anova(site_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+site_lm<-lm( S ~ factor(Temp.x)*factor(Prec.x), data= TBI_means) 
+summary(site_lm)
+af<-anova(site_lm)
+afss <- af$"Sum Sq"
+print(cbind(af,PctExp=afss/sum(afss)*100))
+
+
 T1<- lm(new.k~ gridTemp + gridPrec, data = TBI_means)
 summary(T1)
 step(T1)
@@ -466,21 +625,36 @@ T6<- lm(new.k~  gridTemp + gridPrec + pH + P_div , data = TBI_means)
 summary(T6)
 step(T2)
 
-Tfull<- lm(new.k~ factor(Temp.x) + gridTemp + gridPrec + pH + P_div , data = TBI_means)
+Tfull<- lm(new.k~ factor(Temp.x) + factor(Prec.x) + gridTemp * gridPrec + pH + P_div + AvailN + soil_C.N + Plant_CN , data = TBI_means)
 summary(Tfull)
 step(Tfull)
+drop1(Tfull)
 
-Tred<- lm(new.k~ gridPrec + pH + P_div , data = TBI_means)
+
+Kred<- lm(new.k~ gridTemp + gridPrec + pH + P_div + soil_C.N  , data = TBI_means)
+summary(Kred)
+step(Kred)
+drop1(Kred)
+
+######## Make extra column with predicted k values by model 
+TBI_means$modelK<- fitted(Kred)
+
+Tred2<- lm(new.k~ gridPrec + gridTemp + pH + P_div  , data = TBI_means)
+summary(Tred2)
+anova(Tred2)
+anova(Tred, Tred2)
+
+Tred3<- lm(new.k~ gridPrec + pH + P_div , data = TBI_means)
 summary(Tred)
 anova(Tred)
+step(Tred)
 
-
-step(T5)
-af<-anova(T1)
+step(Tred)
+af<-anova(Tred)
 afss <- af$"Sum Sq"
 print(cbind(af,PctExp=afss/sum(afss)*100))
 
-T1<- lm(S~ gridTemp * gridPrec, data = TBI_means)
+T1<- lm(S~ gridTemp * gridPrec +factor(Temp.x)*factor(Prec.x), data = TBI_means)
 summary(T1)
 step(T1)
 
@@ -496,20 +670,31 @@ summary(T4)
 T5<- lm(S~ factor(Temp.x) + factor(Prec.x) + gridTemp * gridPrec, data = TBI_means)
 summary(T5)
 
-T6<- lm(S~ factor(Temp.x) + gridTemp + gridPrec + pH + P_div + AvailN + soil_C. + Litter.CN, data = TBI_means)
+T6<- lm(S~ factor(Temp.x)*factor(Prec.x) + gridTemp * gridPrec +  Litter.CN  +pH +AvailN +Plant_CN + P_div, data = TBI_means)# +pH +AvailN +Plant_CN + P_div + + Litter.CN
 summary(T6)
 step(T6)
+drop1(T6, test = "F")
 
-Tfull<- lm(S~ factor(Temp.x)*factor(Prec.x) + gridTemp + gridPrec  , data = TBI_means)
-summary(Tfull)
-step(Tfull)
+Tred<- lm(S~ factor(Temp.x) + gridTemp * gridPrec + Litter.CN, data = TBI_means)#+ Litter.CN
+summary(Tred)
+step(Tred)
+drop1(Tred, test = "F")
 
-af<-anova(T1)
+Tred2<- lm(S~ factor(Temp.x)*factor(Prec.x) + gridTemp * gridPrec  , data = TBI_means)
+summary(Tred2)
+step(Tred2)
+anova(Tred, Tred2)
+
+af<-anova(Tred)
 afss <- af$"Sum Sq"
 print(cbind(af,PctExp=afss/sum(afss)*100))
 
-Tred<- lm(S~  factor(Temp.x)+ gridPrec + Litter.C , data = TBI_means)
-summary(Tred)
+Sred<- lm(S~  factor(Temp.x)+ gridPrec + Litter.C , data = TBI_means)
+summary(Sred)
+
+######## Make extra column with predicted S values by model 
+TBI_means$modelS<- fitted(Sred)
+
 
 
 
@@ -526,8 +711,8 @@ print(cbind(af,PctExp=afss/sum(afss)*100))
 
 ###Model validation
 # Check for homogeneity
-E1 <- resid(M1)
-F1 <- fitted(M1)
+E1 <- resid(Kred)
+F1 <- fitted(Kred)
 plot(x = F1, 
      y = E1,
      xlab = "Fitted values",
