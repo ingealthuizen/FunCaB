@@ -18,6 +18,9 @@
 *.m
 *.rar
 *.DS_Store
+*.ps
+*~
+*#
 
 #
 .Ruserdata
