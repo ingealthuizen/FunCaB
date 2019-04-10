@@ -321,6 +321,12 @@ CO2_mass_traits<- subset(CO2_mass_traits,  !paste(turfID,year,sep="_") %in% c("L
 # Linear regression for biomass estimation
 summary(lm(Gram_biomass~ 0 + gram_cover , data=CO2_mass_traits)) # P<0.001 R2=0.90
 summary(lm(Forb_biomass~ 0 + forb_cover , data=CO2_mass_traits)) # P<0.001 R2= 0.83
+#summary(lm(Bryo_biomass~ 0 + bryophyteCov, data = CO2_mass_traits))
+
+
+#ggplot(CO2_mass_traits, aes(x=bryophyteCov, y= Bryo_biomass))+
+#  geom_point()+
+#  geom_smooth(method = "lm")
 
 # calculate Functional group biomass based on regression results of XC plots
 CO2_mass_traits$G_c.biomass<- 0+2.88*(CO2_mass_traits$gram_cover)

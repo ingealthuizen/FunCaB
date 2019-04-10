@@ -83,48 +83,6 @@ Soil_moisture<- Soil_moisture %>%
 CO2_2017<- left_join(CO2_2017, Soil_moisture, by = c("Date", "TurfID"))
 
 
-
-#### Biomass regression
-load("O:\\FunCab\\Data\\FunCaB\\CO2\\Data\\funcabComp2015.RData") 
-composition2015 <- within(composition, vegetationHeight[turfID == 'Ram4F'& Year == "2015"] <- 80)
-subVals <- !is.na(composition2015$vegetationHeight) <= 10
-composition2015$vegetationHeight[subVals] <- composition2015$vegetationHeight[subVals] * 10
-composition2015 <- within(composition2015, vegetationHeight[turfID == 'Fau2C' & Year == "2015"] <- 155)
-composition2015 <- within(composition2015, vegetationHeight[turfID == 'Alr1C' & Year == "2015"] <- 130)
-composition2015 <- within(composition2015, vegetationHeight[turfID == 'Alr2C' & Year == "2015"] <- 197.5)
-composition2015 <- within(composition2015, turfID[siteID == 'Lavisdalen' & Year == "2015" & blockID == "1" & Treatment == "G"] <- "Lav1G")
-
-
-#### Biomass regression based on 2015 removal data
-#### load biomass data ####
-Biomass_2015<- read_excel("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\Vegetation data\\biomass_removals_2015.xlsx")
-Biomass_2015$Biomass_g<- as.numeric(Biomass_2015$Biomass_g)
-Biomass_2015<-Biomass_2015%>%
-  filter(!grepl("RTC", Treatment))%>%
-  spread(key = Func_group, value = Biomass_g)%>%
-  select(-Block, -Round)
-
-# mean mossHeight at site
-mossheight.site<-composition2015%>%
-  mutate(Site = recode(siteID, Ulvhaugen = "Ulv",  Skjellingahaugen = "Skj", Alrust = "Alr", Hogsete = "Hog",  Veskre = "Ves", Fauske = "Fau", Vikesland = "Vik", Lavisdalen = "Lav", Ovstedal = "Ovs", Gudmedalen = "Gud", Rambera = "Ram", Arhelleren = "Arh"))%>% 
-  group_by(Site)%>%
-  summarise(mossHeight = mean(mossHeight, na.rm=TRUE))
-  
-biomass_cover <- left_join(Biomass_2015, composition2015,  by= c("Year", "Treatment", "TurfID"="turfID"))%>%
-  select(Site, Treatment, TurfID, B, F, G, totalGraminoids, totalForbs, totalBryophytes, vegetationHeight)%>%
-  filter(!Site %in% c("Ram", "Gud", "Arh"))%>%
-  left_join(mossheight.site, by = "Site")%>%
-  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
-  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))
-  
-
-#### Biomass removals cover relationships 2015 ####
-# number of observations per Functional group: 144
-summary(lm(B ~ 0+ totalBryophytes + mossHeight, data=biomass_cover)) # R2 = 0.80
-summary(lm(G ~ 0+ totalGraminoids + vegetationHeight,   data=biomass_cover)) # R2 =0.91
-summary(lm(F ~ 0+ totalForbs + vegetationHeight, data=biomass_cover)) # R2 = 0.79
-
- 
 ##### Load vegetation data ####
 load("O:\\FunCab\\Data\\FunCaB\\CO2\\Data\\funcabComp12052018.RData") 
 #Add missing height data 2017
@@ -194,15 +152,64 @@ veg_comp<- composition %>%
   distinct()%>%
   ungroup()
   
+#### Biomass regression
+load("O:\\FunCab\\Data\\FunCaB\\CO2\\Data\\funcabComp2015.RData") 
+composition2015 <- within(composition, vegetationHeight[turfID == 'Ram4F'& Year == "2015"] <- 80)
+subVals <- !is.na(composition2015$vegetationHeight) <= 10
+composition2015$vegetationHeight[subVals] <- composition2015$vegetationHeight[subVals] * 10
+composition2015 <- within(composition2015, vegetationHeight[turfID == 'Fau2C' & Year == "2015"] <- 155)
+composition2015 <- within(composition2015, vegetationHeight[turfID == 'Alr1C' & Year == "2015"] <- 130)
+composition2015 <- within(composition2015, vegetationHeight[turfID == 'Alr2C' & Year == "2015"] <- 197.5)
+composition2015 <- within(composition2015, turfID[siteID == 'Lavisdalen' & Year == "2015" & blockID == "1" & Treatment == "G"] <- "Lav1G")
+
+
+#### Biomass regression based on 2015 removal data
+#### load biomass data ####
+Biomass_2015<- read_excel("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\Vegetation data\\biomass_removals_2015.xlsx")
+Biomass_2015$Biomass_g<- as.numeric(Biomass_2015$Biomass_g)
+Biomass_2015<-Biomass_2015%>%
+  filter(!grepl("RTC", Treatment))%>%
+  spread(key = Func_group, value = Biomass_g)%>%
+  select(-Block, -Round)
+
+# mean mossHeight at site
+mossheight.site<-composition2015%>%
+  mutate(Site = recode(siteID, Ulvhaugen = "Ulv",  Skjellingahaugen = "Skj", Alrust = "Alr", Hogsete = "Hog",  Veskre = "Ves", Fauske = "Fau", Vikesland = "Vik", Lavisdalen = "Lav", Ovstedal = "Ovs", Gudmedalen = "Gud", Rambera = "Ram", Arhelleren = "Arh"))%>% 
+  group_by(Site)%>%
+  summarise(mossHeight = mean(mossHeight, na.rm=TRUE))
+
+biomass_cover <- left_join(Biomass_2015, composition2015,  by= c("Year", "Treatment", "TurfID"="turfID"))%>%
+  select(Site, Treatment, TurfID, B, F, G, totalGraminoids, totalForbs, totalBryophytes, vegetationHeight)%>%
+  filter(!Site %in% c("Ram", "Gud", "Arh"))%>%
+  left_join(mossheight.site, by = "Site")%>%
+  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
+  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))
+
+
+#### Biomass removals cover relationships 2015 ####
+# number of observations per Functional group: 144
+summary(lm(B ~ 0 + totalBryophytes , data=biomass_cover)) #estimate=0.153776 R2 = 0.78
+summary(lm(G ~ 0 + totalGraminoids ,   data=biomass_cover)) #estimate=0.125805 R2 =0.86 
+summary(lm(F ~ 0 + totalForbs , data=biomass_cover)) #estimate=0.116370 R2 = 0.78
+
+#ggplot(biomass_cover, aes(x= totalBryophytes, y= B))+
+#  geom_point()+
+#  geom_smooth(method="lm")
 
 #### calculate FG biomass based on biomass regressions
 veg_comp<- veg_comp%>%
-  mutate(G.Height = ifelse(Treatment == "B" | Treatment == "F"| Treatment == "FB", vegetationHeight,0),
-         F.Height = ifelse(Treatment == "B" | Treatment == "G"| Treatment == "GB", vegetationHeight,0))%>%
-  mutate(B.biomass = 0 + 0.096*bryophyteCov + 0.194*mossHeight,
-         G.biomass = 0 + 0.073*graminoidCov + 0.033*G.Height,
-         F.biomass = 0 + 0.0793*forbCov + 0.013*F.Height)%>%
+  mutate(B.biomass = 0 + 0.153776 * bryophyteCov,
+         G.biomass = 0 + 0.125805 * graminoidCov,
+         F.biomass = 0 + 0.116370 * forbCov)%>%
   mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
+
+#veg_comp<- veg_comp%>%
+#  mutate(G.Height = ifelse(Treatment == "B" | Treatment == "F"| Treatment == "FB", vegetationHeight,0),
+#         F.Height = ifelse(Treatment == "B" | Treatment == "G"| Treatment == "GB", vegetationHeight,0))%>%
+#  mutate(B.biomass = 0 + 0.096*bryophyteCov + 0.194*mossHeight,
+#         G.biomass = 0 + 0.073*graminoidCov + 0.033*G.Height,
+#         F.biomass = 0 + 0.0793*forbCov + 0.013*F.Height)%>%
+#  mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
 
 
 #### FG Cover compensation ####
@@ -246,13 +253,6 @@ summary(lmer(comp.cover ~  Treatment + Treatment:Temp.C + (1|Site), data=cover.c
 
 
 ##################### CO2 flux processing #########################################################################################
-# Measurements per plot
-x<-CO2_2017_GPP %>%
-  group_by(Site, Treatment)%>%
-  summarize(min.par =min(PAR.x),
-          max.par = max(PAR.x))
-  
-  
 
 #seperate L and D measurements and merge them in new file with new column GPP, selecting data with r2>=.9
 CO2_2017_NEE<-subset(CO2_2017, cover== "L" & rsqd>=.8 | cover== "L" & rsqd<=.2 )   
@@ -264,6 +264,11 @@ CO2_2017_GPP$GPP<-CO2_2017_GPP$nee.x- CO2_2017_GPP$nee.y #NEE-Reco
 CO2_2017_GPP<-subset(CO2_2017_GPP, GPP>0 & PAR.x >200)
 
 #write.csv(CO2_2017_GPP, file = "O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_GPP_Removal2017.csv")
+# Measurements per plot
+x<-CO2_2017_GPP %>%
+  group_by(Site, Treatment)%>%
+  summarize(min.par =min(PAR.x),
+            max.par = max(PAR.x))
 
 #### Explore data ####
 CO2_2017_GPP%>%
@@ -285,8 +290,6 @@ library(lmerTest)
 summary(lmer(GPP~ PAR.correct.x*Treatment + (1|Site), CO2_2017_GPP)) 
 summary(lmer(Reco~ tempK*Treatment + (1|Site), CO2_2017_GPP)) 
 summary(lmer(nee.x~ tempK*Treatment + PAR.correct.x*Treatment + (1|Site), CO2_2017_GPP)) 
-
-
 
 
 #### calculated median flux values per plot 
@@ -372,14 +375,12 @@ ggplot(CO2veg_2017, aes(Treatment, Reco, fill = T_level ))+
   annotate("text", x=8.2, y=15, label= "b)", size =5)+
   theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 12), axis.title.y=element_text(size = 14), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"), legend.position = "none" )
   
-
 summary(lmer(GPP~ Treatment*T_level + (1|Site/Block), data=CO2veg_2017)) #
 
 
 #### Effect of grid and treatment on GPP and Reco
-
 ann_textA <- data.frame(estimate = -6, term = "B",lab=c("a)","b)"),
-                        response = factor(c("GPP","Reco"),levels = c("GPP","Reco")))
+                        response = factor(c("GPP","Reco")),levels = c("GPP","Reco"))
 CO2veg_2017%>%  ungroup()%>%
   mutate(Treatment=replace(Treatment, Treatment == "B", "Moss")) %>%
   #filter(!Treatment %in% c("FGB", "C"))%>%
@@ -422,8 +423,9 @@ GPP_FG<-CO2veg_2017%>%  ungroup()%>%
   filter(!term == "(Intercept)") %>% 
   filter(!grepl("^sd_", term)) %>% 
   mutate(lower = (estimate - std.error*1.96),
-         upper = (estimate + std.error*1.96)) %>%
+         upper = (estimate + std.error*1.96))%>%
   as.data.frame()
+
 GPP_FG%>%
   ggplot(aes(x =term, y = estimate, shape=response, fill= response, ymin = lower, ymax = upper)) +
   geom_errorbar(width = 0, position = position_dodge(width = 0.5)) +
@@ -456,6 +458,7 @@ Reco_FG<-CO2veg_2017%>%  ungroup()%>%
          upper = (estimate + std.error*1.96)) %>%
   as.data.frame()
   #filter(!term == "Temp.C")%>%
+
 Reco_FG%>%  
 ggplot(aes(x =term, y = estimate, shape=response, fill=response, ymin = lower, ymax = upper)) +
   geom_errorbar(width = 0, position = position_dodge(width = 0.5)) +
@@ -524,7 +527,7 @@ B.flux_CI%>% filter(!Cflux == "NEE")%>%
   geom_hline(yintercept = 0, linetype = "solid") +
   geom_boxplot()+
   facet_grid(~Cflux)+
-  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_blank(), axis.title.y=element_blank(), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"), legend.position = "none" )
+  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_blank(), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"), legend.position = "none" )
 
 CImean <- B.flux_CI%>%
   group_by(Cflux, presentFG, T_level)%>%
@@ -632,7 +635,7 @@ flux_CI%>%
   ggplot( aes(presentFG, flux, col= T_level))+
   geom_boxplot( )+
   geom_hline(yintercept = 1, linetype = "dashed") +
-  facet_grid(~Cflux)
+  facet_grid(~ Cflux)
 
 #### compensation index for removals 
 flux_CI%>% 
@@ -640,9 +643,10 @@ flux_CI%>%
   ggplot( aes(presentFG, CI, col= T_level))+
   geom_boxplot( )+
   geom_hline(yintercept = 1, linetype = "dashed") +
-  facet_grid(~Cflux)
+  facet_grid(~ Cflux)
 
 
+####-----------------------------------------------------------------------------------------------------------------
 #### Calculate compensation Index based on Cover 
 specificF <- CO2veg_2017%>%
   gather(key= Cflux , value = flux, NEE, Reco, GPP)%>%
