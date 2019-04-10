@@ -210,10 +210,6 @@ predicted_F <- data.frame(pred_F = predict(F_biomass.fit, biomass_cover), vegeta
 #  geom_line(color='red',data = predicted_B, aes(x=mossHeight, y=pred_B))
 
 
-#ggplot(biomass_cover, aes(x= totalBryophytes, y= B))+
-#  geom_point()+
-#  geom_smooth(method="lm", formula = )
-
 #### calculate FG biomass based on biomass regressions
 veg_comp<- veg_comp%>%
   mutate(G.Height = ifelse(Treatment == "B" | Treatment == "F"| Treatment == "FB", vegetationHeight,0),
@@ -672,6 +668,31 @@ flux_CI%>%
 # full compensation MiI = delta M, amount of gap recruitment biomass equals biomass lost through removal
 # delta Mj/MiI * 100 % biomass compensation
 
+#select estimated biomass of PFG in control plots
+Control_FGbiomass<- CO2veg_2017%>%
+  group_by(Site, Block, Treatment)%>%
+  filter(Treatment == "C")%>%
+  select(Site, Block, Treatment, B.biomass, G.biomass, F.biomass)
+
+# actual biomass removed in treatments in 2017 based on removal data
+# load ve
+Biomass_2017<-read_excel("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\Vegetation data\\biomass_removals_2017.xlsx")
+Biomass_2017$Biomass_g <- substr(Biomass_2017$Biomass_g,1,nchar(Biomass_2017$Biomass_g)-1)
+
+
+B.specificF <- CO2veg_2017%>%
+  gather(key= Cflux , value = flux, NEE, Reco, GPP)%>%
+  group_by(Site, Block, Cflux)%>%
+  left_join((.) %>% filter(Treatment == "C")%>% select(Site, Block, Cflux, control= flux))%>%
+  group_by(Site, Treatment)%>%
+  mutate(presentFG = recode(Treatment, FGB = "zero", GF = "b", FB= "g", GB = "f", B= "gf", G = "fb", F = "gb"))%>%
+  mutate(totalBiomass = B.biomass+G.biomass+F.biomass)%>%# calculate cover sum per plot 
+  filter(Treatment %in% c("GB" , "FB" , "GF"))%>% # filter for plots with single FG
+  gather(key= FG, value= biomass, B.biomass, G.biomass, F.biomass )%>%
+  filter((Treatment == "GB" & FG == "F.biomass") |(Treatment == "FB" & FG == "G.biomass") |(Treatment =="GF" & FG == "B.biomass"))%>%
+  mutate(SpecificFlux = flux/ biomass)%>%
+  ungroup()%>%
+  select(Site, Block, FG, Cflux, SpecificFlux)
 
 
 
