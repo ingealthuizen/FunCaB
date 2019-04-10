@@ -170,7 +170,11 @@ Biomass_2015$Biomass_g<- as.numeric(Biomass_2015$Biomass_g)
 Biomass_2015<-Biomass_2015%>%
   filter(!grepl("RTC", Treatment))%>%
   spread(key = Func_group, value = Biomass_g)%>%
-  select(-Block, -Round)
+  select(-Block, -Round)%>%
+  mutate(B_g.m2 = B*0.0625,
+         G_g.m2 = G*0.0625,
+         F_g.m2 = F*0.0625)
+
 
 # mean mossHeight at site
 mossheight.site<-composition2015%>%
@@ -179,37 +183,45 @@ mossheight.site<-composition2015%>%
   summarise(mossHeight = mean(mossHeight, na.rm=TRUE))
 
 biomass_cover <- left_join(Biomass_2015, composition2015,  by= c("Year", "Treatment", "TurfID"="turfID"))%>%
-  select(Site, Treatment, TurfID, B, F, G, totalGraminoids, totalForbs, totalBryophytes, vegetationHeight)%>%
+  select(Site, Treatment, TurfID, B, F, G, B_g.m2, G_g.m2, F_g.m2, totalGraminoids, totalForbs, totalBryophytes, vegetationHeight)%>%
   filter(!Site %in% c("Ram", "Gud", "Arh"))%>%
   left_join(mossheight.site, by = "Site")%>%
   mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
   mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))
 
 
-#### Biomass removals cover relationships 2015 ####
-# number of observations per Functional group: 144
-summary(lm(B ~ 0 + totalBryophytes , data=biomass_cover)) #estimate=0.153776 R2 = 0.78
-summary(lm(G ~ 0 + totalGraminoids ,   data=biomass_cover)) #estimate=0.125805 R2 =0.86 
-summary(lm(F ~ 0 + totalForbs , data=biomass_cover)) #estimate=0.116370 R2 = 0.78
+#### Biomass Regressions Removals; cover + height biomass estimates 2015 ####
+# number of observations per Functional group: 192
+B_biomass.fit <-lm(B_g.m2 ~ 0 + totalBryophytes + mossHeight , data=biomass_cover) 
+summary(B_biomass.fit) #estimate tB=0.0060149 , mH = 0.0121319 R2 = 0.80
+G_biomass.fit <-lm(G_g.m2 ~ 0 + totalGraminoids + vegetationHeight, data=biomass_cover)  
+summary(G_biomass.fit) #estimate tG=0.0045586 , vH = 0.0020865 R2 = 0.91
+F_biomass.fit <-lm(F_g.m2 ~ 0 + totalForbs + vegetationHeight , data=biomass_cover) 
+summary(F_biomass.fit) #estimate tG=0.0060959 , vH = 0.0008366 R2 = 0.79
+
+# save predictions of the biomass regression models new data frame together with predictor
+predicted_B <- data.frame(pred_B = predict(B_biomass.fit, biomass_cover), mossHeight=biomass_cover$mossHeight)
+predicted_G <- data.frame(pred_G = predict(G_biomass.fit, biomass_cover), vegetationHeight=biomass_cover$vegetationHeight)
+predicted_F <- data.frame(pred_F = predict(F_biomass.fit, biomass_cover), vegetationHeight=biomass_cover$vegetationHeight)
+
+# this is the predicted line of multiple linear regression
+#ggplot(data = biomass_cover, aes(x = mossHeight, y = B_g.m2)) + 
+#  geom_point(color='blue') +
+#  geom_line(color='red',data = predicted_B, aes(x=mossHeight, y=pred_B))
+
 
 #ggplot(biomass_cover, aes(x= totalBryophytes, y= B))+
 #  geom_point()+
-#  geom_smooth(method="lm")
+#  geom_smooth(method="lm", formula = )
 
 #### calculate FG biomass based on biomass regressions
 veg_comp<- veg_comp%>%
-  mutate(B.biomass = 0 + 0.153776 * bryophyteCov,
-         G.biomass = 0 + 0.125805 * graminoidCov,
-         F.biomass = 0 + 0.116370 * forbCov)%>%
+  mutate(G.Height = ifelse(Treatment == "B" | Treatment == "F"| Treatment == "FB", vegetationHeight,0),
+         F.Height = ifelse(Treatment == "B" | Treatment == "G"| Treatment == "GB", vegetationHeight,0))%>%
+  mutate(B.biomass = 0 + 0.0060149*bryophyteCov + 0.0121319*mossHeight,
+         G.biomass = 0 + 0.0045586*graminoidCov + 0.0020865*G.Height,
+         F.biomass = 0 + 0.0060959*forbCov + 0.0008366*F.Height)%>%
   mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
-
-#veg_comp<- veg_comp%>%
-#  mutate(G.Height = ifelse(Treatment == "B" | Treatment == "F"| Treatment == "FB", vegetationHeight,0),
-#         F.Height = ifelse(Treatment == "B" | Treatment == "G"| Treatment == "GB", vegetationHeight,0))%>%
-#  mutate(B.biomass = 0 + 0.096*bryophyteCov + 0.194*mossHeight,
-#         G.biomass = 0 + 0.073*graminoidCov + 0.033*G.Height,
-#         F.biomass = 0 + 0.0793*forbCov + 0.013*F.Height)%>%
-#  mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
 
 
 #### FG Cover compensation ####
@@ -345,12 +357,12 @@ Removal_T2<- CO2veg_2017%>% filter(T_level == "Sub-alpine")
 Removal_T3<- CO2veg_2017%>% filter(T_level == "Boreal")
 
 # test the pairwise comparison between treatments for different T_levels
-TukeyHSD(aov(GPP~ Treatment, data=Removal_T1) 
-TukeyHSD(aov(GPP~ Treatment, data=Removal_T2) 
-TukeyHSD(aov(GPP~ Treatment, data=Removal_T3)        
-TukeyHSD(aov(Reco~ Treatment, data=Removal_T1) 
-TukeyHSD(aov(Reco~ Treatment, data=Removal_T2) 
-TukeyHSD(aov(Reco~ Treatment, data=Removal_T3)          
+TukeyHSD(aov(GPP~ Treatment, data=Removal_T1)) 
+TukeyHSD(aov(GPP~ Treatment, data=Removal_T2))
+TukeyHSD(aov(GPP~ Treatment, data=Removal_T3))      
+TukeyHSD(aov(Reco~ Treatment, data=Removal_T1)) 
+TukeyHSD(aov(Reco~ Treatment, data=Removal_T2)) 
+TukeyHSD(aov(Reco~ Treatment, data=Removal_T3))         
          
          
 layout(matrix(c(1,2,3,4),2,2)) # optional layout 
@@ -482,6 +494,13 @@ ggplot(CO2veg_2017, aes(x = Reco, fill = factor(P_level))) +
 
 
 #### CI calculation with biomass
+#ED is % contribution by removed FG in intact community
+#assumption that per-unit function is same in intact community as when FG is alone
+# CI contributions
+# 1. changes in biomass of remaining PFGs compared to control situation (gap-recruitment)
+# 2. change in per unit function of remaining PFG
+# 3. differences in per-unit functioning between removed and remaining PFG (difference in fluxrate)
+
 B.specificF <- CO2veg_2017%>%
   gather(key= Cflux , value = flux, NEE, Reco, GPP)%>%
   group_by(Site, Block, Cflux)%>%
@@ -644,6 +663,17 @@ flux_CI%>%
   geom_boxplot( )+
   geom_hline(yintercept = 1, linetype = "dashed") +
   facet_grid(~ Cflux)
+
+
+#### Separating CI contributions
+# 1. changes in biomass of remaining PFGs compared to control situation (gap-recruitment)
+# R = removal community, I = intact community, i = removed species, j = remaining species
+# MjR - MjI = delta Mj, when >0 biomass compensation. 
+# full compensation MiI = delta M, amount of gap recruitment biomass equals biomass lost through removal
+# delta Mj/MiI * 100 % biomass compensation
+
+
+
 
 
 ####-----------------------------------------------------------------------------------------------------------------
