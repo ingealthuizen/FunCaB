@@ -220,47 +220,7 @@ veg_comp<- veg_comp%>%
   mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
 
 
-#### FG Cover compensation ####
-cover.compensation<- veg_comp%>%
-  select(Site, blockID, Treatment, turfID, bryophyteCov, graminoidCov, forbCov, B.biomass, G.biomass, F.biomass)%>%
-  group_by(Site, blockID, Treatment,turfID)%>%
-  gather(key= FGcover , value = cover, bryophyteCov, graminoidCov, forbCov)%>%
-  gather(key=FGbiomass, value =biomass, B.biomass, G.biomass, F.biomass)%>%
-  group_by(Site, blockID, FGcover)%>%
-  left_join((.) %>% filter(Treatment == "C")%>% select(Site, blockID, FGcover, control.cover= cover))%>%
-  mutate(comp.cover = cover-control.cover)%>%
-  filter(!Treatment %in% c("C", "FGB"))%>%
-  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
-  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))%>%
-  mutate(Temp.C = recode(Site, Ulv = 6.17, Lav = 6.45,  Gud = 5.87, Skj = 6.58, Alr = 9.14, Hog = 9.17, Ram = 8.77, 
-                         Ves = 8.67, Fau = 10.3, Vik = 10.55, Arh = 10.6, Ovs = 10.78))%>%
-  mutate(P.mm = recode(Site, Ulv = 596, Alr = 789, Fau = 600, Lav = 1321, Hog = 1356, Vik = 1161, Gud = 1925, 
-                       Ram = 1848, Arh = 2044, Skj = 2725, Ves = 3029, Ovs = 2923))%>%
-  ungroup()
-
-# single removal compensation
-cover.compensation%>%
-  filter(Treatment %in% c("FB", "GB", "GF"))%>%
-  #filter(Treatment %in% c("F", "B", "G"))%>%
-    ggplot( aes(T_level, comp.cover, fill = FGcover))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  facet_grid(~Treatment)+
-  theme(axis.title.x=element_text(size = 18), axis.text.x=element_text(size = 14), axis.title = element_text(size = 18), axis.text.y = element_text(size = 14), strip.text = element_text(size = 14))
-
-cover.compensation%>%group_by(Site, Treatment, FGcover)%>%
-  summarise(FGcomp = mean(comp.cover, na.rm = TRUE))%>%
-  spread(FGcover, FGcomp)
-
-cover.compensation%>%group_by(Site, turfID, FGcover)%>%
-  distinct(turfID, .keep_all = TRUE)%>%
-  spread(FGcover, comp.cover)
-
-#library(lme4)
-summary(lmer(comp.cover ~  Treatment + Treatment:Temp.C + (1|Site), data=cover.compensation ))
-
-
-##################### CO2 flux processing #########################################################################################
+##################### CO2 flux processing ##########################################################################
 
 #seperate L and D measurements and merge them in new file with new column GPP, selecting data with r2>=.9
 CO2_2017_NEE<-subset(CO2_2017, cover== "L" & rsqd>=.8 | cover== "L" & rsqd<=.2 )   
@@ -668,33 +628,81 @@ flux_CI%>%
 # full compensation MiI = delta M, amount of gap recruitment biomass equals biomass lost through removal
 # delta Mj/MiI * 100 % biomass compensation
 
-#select estimated biomass of PFG in control plots
-Control_FGbiomass<- CO2veg_2017%>%
-  group_by(Site, Block, Treatment)%>%
-  filter(Treatment == "C")%>%
-  select(Site, Block, Treatment, B.biomass, G.biomass, F.biomass)
 
-# actual biomass removed in treatments in 2017 based on removal data
-# load ve
-Biomass_2017<-read_excel("\\\\eir.uib.no\\home6\\ial008\\FunCab\\Data\\Vegetation data\\biomass_removals_2017.xlsx")
-Biomass_2017$Biomass_g <- substr(Biomass_2017$Biomass_g,1,nchar(Biomass_2017$Biomass_g)-1)
+#### FG Cover compensation ####
+Biomass.compensation<- CO2veg_2017%>%
+  select(Site, Block, Treatment, turfID, bryophyteCov, graminoidCov, forbCov, vegetationHeight, mossHeight, 
+         B.biomass, G.biomass, F.biomass)%>%
+  group_by(Site, Block, Treatment, turfID)%>%
+  #gather(key= FGcover , value = cover, bryophyteCov, graminoidCov, forbCov)%>%
+  gather(key= FGbiomass, value =biomass, B.biomass, G.biomass, F.biomass)%>%
+  group_by(Site, Block, FGbiomass)%>%
+  left_join((.) %>% filter(Treatment == "C")%>% select(Site, Block, FGbiomass, control.biomass= biomass))%>%
+  mutate(comp.biomass = biomass-control.biomass)%>%
+  filter(!Treatment %in% c("C", "FGB"))%>%
+  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
+  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))%>%
+  mutate(Temp.C = recode(Site, Ulv = 6.17, Lav = 6.45,  Gud = 5.87, Skj = 6.58, Alr = 9.14, Hog = 9.17, Ram = 8.77, 
+                         Ves = 8.67, Fau = 10.3, Vik = 10.55, Arh = 10.6, Ovs = 10.78))%>%
+  mutate(P.mm = recode(Site, Ulv = 596, Alr = 789, Fau = 600, Lav = 1321, Hog = 1356, Vik = 1161, Gud = 1925, 
+                       Ram = 1848, Arh = 2044, Skj = 2725, Ves = 3029, Ovs = 2923))%>%
+  ungroup()
+
+# single removal compensation
+Biomass.compensation%>%
+  #filter(Treatment %in% c("FB", "GB", "GF"))%>%
+  filter(Treatment %in% c("F", "B", "G"))%>%
+  ggplot(aes(T_level, comp.biomass, fill = FGbiomass))+
+  geom_boxplot()+
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_grid(P_level~Treatment)+
+  theme(axis.title.x=element_text(size = 18), axis.text.x=element_text(size = 14), axis.title = element_text(size = 18), axis.text.y = element_text(size = 14), strip.text = element_text(size = 14))
+
+Biomass.compensation%>%group_by(Site, Treatment, FGbiomass)%>%
+  summarise(FGcomp = mean(comp.biomass, na.rm = TRUE))%>%
+  spread(FGbiomass, FGcomp)
+
+Biomass.compensation%>%group_by(Site, turfID, FGbiomass)%>%
+  distinct(turfID, .keep_all = TRUE)%>%
+  spread(FGbiomass, comp.biomass)
+
+# calculate biomass compensation index B_CI for each plot 
+BCI <- Biomass.compensation%>%
+    select(Site, Block, Treatment, turfID, FGbiomass, comp.biomass, P_level, T_level)%>%
+    spread(key=FGbiomass, value=comp.biomass)%>% # assign zero to biomass compensation when FG is removed
+    mutate(F.biomass = ifelse(grepl("F", Treatment), 0, F.biomass),
+           G.biomass = ifelse(grepl("G", Treatment), 0, G.biomass),
+           B.biomass = ifelse(grepl("B", Treatment), 0, B.biomass),
+           B_CI = G.biomass +F.biomass + B.biomass)%>%
+  ungroup()
+    
+BCI%>%
+  #filter(Treatment %in% c("FB", "GB", "GF"))%>%
+  #filter(Treatment %in% c("F", "B", "G"))%>%
+  ggplot(aes(T_level, B_CI, fill = Treatment))+
+  geom_boxplot()+
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_grid(~P_level)+
+  theme(axis.title.x=element_text(size = 18), axis.text.x=element_text(size = 14), axis.title = element_text(size = 18), axis.text.y = element_text(size = 14), strip.text = element_text(size = 14))  
 
 
-B.specificF <- CO2veg_2017%>%
-  gather(key= Cflux , value = flux, NEE, Reco, GPP)%>%
-  group_by(Site, Block, Cflux)%>%
-  left_join((.) %>% filter(Treatment == "C")%>% select(Site, Block, Cflux, control= flux))%>%
-  group_by(Site, Treatment)%>%
-  mutate(presentFG = recode(Treatment, FGB = "zero", GF = "b", FB= "g", GB = "f", B= "gf", G = "fb", F = "gb"))%>%
-  mutate(totalBiomass = B.biomass+G.biomass+F.biomass)%>%# calculate cover sum per plot 
-  filter(Treatment %in% c("GB" , "FB" , "GF"))%>% # filter for plots with single FG
-  gather(key= FG, value= biomass, B.biomass, G.biomass, F.biomass )%>%
-  filter((Treatment == "GB" & FG == "F.biomass") |(Treatment == "FB" & FG == "G.biomass") |(Treatment =="GF" & FG == "B.biomass"))%>%
-  mutate(SpecificFlux = flux/ biomass)%>%
-  ungroup()%>%
-  select(Site, Block, FG, Cflux, SpecificFlux)
+# compare CI with B_CI to see if biomass compensation is the main driver of CI
+# join CI data with B_CI data
+CI_BCI_2 <- right_join(B.flux_CI, BCI, by= c("Site", "Block", "Treatment", "turfID"))
 
-
+CI_BCI_2%>%
+  filter(Cflux == "GPP")%>%
+  filter(Treatment %in% c("FB" , "GB", "G", "B", "F" ))%>%
+  ggplot(aes(B_CI, CI, color = Treatment ))+
+  geom_point()+
+  geom_abline(intercept = 0, slope = 1)+
+  geom_hline(yintercept= 0 , linetype="dashed", color = "grey")+
+  geom_vline(xintercept = 0, linetype= "dashed", color = "grey")+
+  facet_grid(~Cflux)+
+  #xlim(0,1)+
+  #ylim(0,2.5)+
+  facet_grid(T_level.x~P_level.x)+
+  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_blank(), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
 
 
 ####-----------------------------------------------------------------------------------------------------------------
