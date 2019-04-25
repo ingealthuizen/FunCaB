@@ -171,9 +171,9 @@ Biomass_2015<-Biomass_2015%>%
   filter(!grepl("RTC", Treatment))%>%
   spread(key = Func_group, value = Biomass_g)%>%
   select(-Block, -Round)%>%
-  mutate(B_g.m2 = B*0.0625,
-         G_g.m2 = G*0.0625,
-         F_g.m2 = F*0.0625)
+  mutate(B_g.m2 = B/0.0625,
+         G_g.m2 = G/0.0625,
+         F_g.m2 = F/0.0625)
 
 
 # mean mossHeight at site
@@ -184,7 +184,7 @@ mossheight.site<-composition2015%>%
 
 biomass_cover <- left_join(Biomass_2015, composition2015,  by= c("Year", "Treatment", "TurfID"="turfID"))%>%
   select(Site, Treatment, TurfID, B, F, G, B_g.m2, G_g.m2, F_g.m2, totalGraminoids, totalForbs, totalBryophytes, vegetationHeight)%>%
-  filter(!Site %in% c("Ram", "Gud", "Arh"))%>%
+  #filter(!Site %in% c("Ram", "Gud", "Arh"))%>%
   left_join(mossheight.site, by = "Site")%>%
   mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
   mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))
@@ -197,7 +197,7 @@ summary(B_biomass.fit) #estimate tB=0.0060149 , mH = 0.0121319 R2 = 0.80
 G_biomass.fit <-lm(G_g.m2 ~ 0 + totalGraminoids + vegetationHeight, data=biomass_cover)  
 summary(G_biomass.fit) #estimate tG=0.0045586 , vH = 0.0020865 R2 = 0.91
 F_biomass.fit <-lm(F_g.m2 ~ 0 + totalForbs + vegetationHeight , data=biomass_cover) 
-summary(F_biomass.fit) #estimate tG=0.0060959 , vH = 0.0008366 R2 = 0.79
+summary(F_biomass.fit) #estimate tF=0.0060959 , vH = 0.0008366 R2 = 0.79
 
 # save predictions of the biomass regression models new data frame together with predictor
 predicted_B <- data.frame(pred_B = predict(B_biomass.fit, biomass_cover), mossHeight=biomass_cover$mossHeight)
@@ -214,9 +214,9 @@ predicted_F <- data.frame(pred_F = predict(F_biomass.fit, biomass_cover), vegeta
 veg_comp<- veg_comp%>%
   mutate(G.Height = ifelse(Treatment == "B" | Treatment == "F"| Treatment == "FB", vegetationHeight,0),
          F.Height = ifelse(Treatment == "B" | Treatment == "G"| Treatment == "GB", vegetationHeight,0))%>%
-  mutate(B.biomass = 0 + 0.0060149*bryophyteCov + 0.0121319*mossHeight,
-         G.biomass = 0 + 0.0045586*graminoidCov + 0.0020865*G.Height,
-         F.biomass = 0 + 0.0060959*forbCov + 0.0008366*F.Height)%>%
+  mutate(B.biomass = 0 + 1.3231*bryophyteCov + 3.1864*mossHeight,
+         G.biomass = 0 + 1.04437*graminoidCov + 0.55246*G.Height,
+         F.biomass = 0 + 1.37491*forbCov + 0.22363*F.Height)%>%
   mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
 
 
@@ -448,7 +448,7 @@ ggplot(CO2veg_2017, aes(x = Reco, fill = factor(P_level))) +
   geom_density(alpha = 0.3)+
   facet_grid(~T_level)
 
-
+#####################################################################################################################
 #### CI calculation with biomass
 #ED is % contribution by removed FG in intact community
 #assumption that per-unit function is same in intact community as when FG is alone
@@ -470,6 +470,11 @@ B.specificF <- CO2veg_2017%>%
   mutate(SpecificFlux = flux/ biomass)%>%
   ungroup()%>%
   select(Site, Block, FG, Cflux, SpecificFlux)
+
+ggplot(B.specificF, aes(Site, SpecificFlux, col = FG))+
+  geom_boxplot()+
+  geom_point(pch = 21, position = position_jitterdodge())+
+  facet_grid(~Cflux)
 
 B.ED_calc <- CO2veg_2017%>%
   gather(key= Cflux , value = flux, NEE, Reco, GPP)%>%
@@ -522,6 +527,7 @@ aov.CI.Reco<- aov(CI ~ T_level, data=test.CI.Reco) #
 summary(aov.CI.Reco)
 TukeyHSD(aov.CI.Reco)
 
+### MANUSCRIPT PLOTS
 ann_textB<- data.frame(estimate = -6, term = "B",lab=c("a)","b)"),
                         Cflux = factor(c("GPP","Reco"),levels = c("GPP","Reco")))
 B.flux_CI%>% filter(!Cflux == "NEE")%>%
@@ -594,32 +600,6 @@ testReco2<-flux_CI%>% filter(Cflux== "Reco" )%>%
 summary(glm(deltaCI.C~ -1 + Treatment + Treatment:T_level, data =testReco2))
 # B and F removal different from control (CI =1), G removal not sign different (p = 0.08) from CI= 1 so full compensation, no interactions
 
-B.flux_CI%>% filter(!Cflux == "NEE")%>%
-  filter(Treatment %in% c("G" , "F" , "B"))%>%
-  ggplot( aes(T_level, CI, fill = presentFG))+
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  geom_hline(yintercept = 0, linetype = "solid") +
-  geom_boxplot()+
-  facet_grid(~Cflux)+
-  theme(axis.title.x=element_text(size = 18), axis.text.x=element_text(size = 14), axis.title = element_text(size = 18), axis.text.y = element_text(size = 14), strip.text = element_text(size = 14))
-
-
-### compensation index for single FG remaining
-flux_CI%>% 
-  filter(presentFG %in% c("all", "f" , "g" , "b"), !Cflux == "NEE")%>%
-  ggplot( aes(presentFG, flux, col= T_level))+
-  geom_boxplot( )+
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  facet_grid(~ Cflux)
-
-#### compensation index for removals 
-flux_CI%>% 
-  filter(!Cflux == "NEE")%>%
-  ggplot( aes(presentFG, CI, col= T_level))+
-  geom_boxplot( )+
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  facet_grid(~ Cflux)
-
 
 #### Separating CI contributions
 # 1. changes in biomass of remaining PFGs compared to control situation (gap-recruitment)
@@ -628,17 +608,26 @@ flux_CI%>%
 # full compensation MiI = delta M, amount of gap recruitment biomass equals biomass lost through removal
 # delta Mj/MiI * 100 % biomass compensation
 
-
+### HAVE RICHARD CHECK THIS!!!
 #### FG Cover compensation ####
+CO2veg_2017$Total.biomass <- CO2veg_2017$B.biomass + CO2veg_2017$F.biomass + CO2veg_2017$G.biomass
+
+ggplot(CO2veg_2017, aes(Block, Total.biomass, col = Treatment))+
+  geom_boxplot()+
+  facet_wrap(~Site)
+
+
 Biomass.compensation<- CO2veg_2017%>%
   select(Site, Block, Treatment, turfID, bryophyteCov, graminoidCov, forbCov, vegetationHeight, mossHeight, 
-         B.biomass, G.biomass, F.biomass)%>%
+         B.biomass, G.biomass, F.biomass, Total.biomass)%>%
   group_by(Site, Block, Treatment, turfID)%>%
+  group_by(Site, Block, Treatment)%>%
+  mutate(Total.biomass = B.biomass + G.biomass + F.biomass)%>%
   #gather(key= FGcover , value = cover, bryophyteCov, graminoidCov, forbCov)%>%
   gather(key= FGbiomass, value =biomass, B.biomass, G.biomass, F.biomass)%>%
   group_by(Site, Block, FGbiomass)%>%
-  left_join((.) %>% filter(Treatment == "C")%>% select(Site, Block, FGbiomass, control.biomass= biomass))%>%
-  mutate(comp.biomass = biomass-control.biomass)%>%
+  left_join((.) %>% filter(Treatment == "C")%>% select(Site, Block, FGbiomass, control.biomass= Total.biomass))%>%
+  mutate(comp.biomass = (biomass-control.biomass)/100)%>%
   filter(!Treatment %in% c("C", "FGB"))%>%
   mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
   mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))%>%
@@ -651,35 +640,66 @@ Biomass.compensation<- CO2veg_2017%>%
 # single removal compensation
 Biomass.compensation%>%
   #filter(Treatment %in% c("FB", "GB", "GF"))%>%
-  filter(Treatment %in% c("F", "B", "G"))%>%
+  #filter(Treatment %in% c("F", "B", "G"))%>%
   ggplot(aes(T_level, comp.biomass, fill = FGbiomass))+
   geom_boxplot()+
   geom_hline(yintercept = 0, linetype = "dashed") +
   facet_grid(P_level~Treatment)+
   theme(axis.title.x=element_text(size = 18), axis.text.x=element_text(size = 14), axis.title = element_text(size = 18), axis.text.y = element_text(size = 14), strip.text = element_text(size = 14))
 
-Biomass.compensation%>%group_by(Site, Treatment, FGbiomass)%>%
-  summarise(FGcomp = mean(comp.biomass, na.rm = TRUE))%>%
-  spread(FGbiomass, FGcomp)
 
-Biomass.compensation%>%group_by(Site, turfID, FGbiomass)%>%
-  distinct(turfID, .keep_all = TRUE)%>%
-  spread(FGbiomass, comp.biomass)
+#### Calculate difference between total biomass in treatment and control
+Biomass.compensation<- CO2veg_2017%>%
+  select(Site, Block, Treatment, turfID, bryophyteCov, graminoidCov, forbCov, vegetationHeight, mossHeight, 
+         B.biomass, G.biomass, F.biomass, Total.biomass)%>%
+  mutate(F.biomass = ifelse(grepl("F", Treatment), 0, F.biomass),
+         G.biomass = ifelse(grepl("G", Treatment), 0, G.biomass),
+         B.biomass = ifelse(grepl("B", Treatment), 0, B.biomass))%>% # make sure removed FG biomass is 0
+  mutate(Total.biomass = B.biomass + G.biomass + F.biomass)%>%
+  ungroup()
+# ! B.biomass = 0
+#need to calculate control biomass - biomass of FG that will be removed in Treatment (treatment based)
+
+Biomass.Control <- Biomass.compensation%>%
+  mutate(F = B.biomass + G.biomass,
+         G = F.biomass + B.biomass,
+         B = G.biomass + F.biomass,
+         FB = G.biomass,
+         GF = B.biomass,
+         GB = F.biomass,
+         FGB = 0)%>% # calculate biomass remaining for different combination of removals 
+  gather(key = "bTreatment", value = "Remain.biomass", F:FGB)%>%
+  select(Site, Block, Treatment, bTreatment, B.biomass,  G.biomass, F.biomass , Remain.biomass)%>%
+  filter(Treatment == "C")
+  
+BCI <- right_join(Biomass.compensation, Biomass.Control, by = c("Site", "Block", "Treatment" = "bTreatment"))%>%
+    # need to subtract biomass of FG that will be removed from total biomass of control
+  mutate(BCI = (Total.biomass/Remain.biomass))%>%
+  filter(!Treatment %in% c("C", "FGB"))%>%
+  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
+  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))%>%
+  mutate(Temp.C = recode(Site, Ulv = 6.17, Lav = 6.45,  Gud = 5.87, Skj = 6.58, Alr = 9.14, Hog = 9.17, Ram = 8.77, 
+                         Ves = 8.67, Fau = 10.3, Vik = 10.55, Arh = 10.6, Ovs = 10.78))%>%
+  mutate(P.mm = recode(Site, Ulv = 596, Alr = 789, Fau = 600, Lav = 1321, Hog = 1356, Vik = 1161, Gud = 1925, 
+                       Ram = 1848, Arh = 2044, Skj = 2725, Ves = 3029, Ovs = 2923))%>%
+  ungroup()
+
+
 
 # calculate biomass compensation index B_CI for each plot 
-BCI <- Biomass.compensation%>%
-    select(Site, Block, Treatment, turfID, FGbiomass, comp.biomass, P_level, T_level)%>%
-    spread(key=FGbiomass, value=comp.biomass)%>% # assign zero to biomass compensation when FG is removed
-    mutate(F.biomass = ifelse(grepl("F", Treatment), 0, F.biomass),
-           G.biomass = ifelse(grepl("G", Treatment), 0, G.biomass),
-           B.biomass = ifelse(grepl("B", Treatment), 0, B.biomass),
-           B_CI = G.biomass +F.biomass + B.biomass)%>%
-  ungroup()
+#BCI <- Biomass.compensation%>%
+#    select(Site, Block, Treatment, turfID, FGbiomass, comp.biomass, P_level, T_level)%>%
+#    spread(key=FGbiomass, value=comp.biomass)%>% # assign zero to biomass compensation when FG is removed
+#    mutate(F.biomass = ifelse(grepl("F", Treatment), 0, F.biomass),
+#           G.biomass = ifelse(grepl("G", Treatment), 0, G.biomass),
+#           B.biomass = ifelse(grepl("B", Treatment), 0, B.biomass),
+#           B_CI = G.biomass +F.biomass + B.biomass)%>%
+#  ungroup()
     
 BCI%>%
   #filter(Treatment %in% c("FB", "GB", "GF"))%>%
   #filter(Treatment %in% c("F", "B", "G"))%>%
-  ggplot(aes(T_level, B_CI, fill = Treatment))+
+  ggplot(aes(T_level, BCI, fill = Treatment))+
   geom_boxplot()+
   geom_hline(yintercept = 0, linetype = "dashed") +
   facet_grid(~P_level)+
@@ -693,7 +713,7 @@ CI_BCI_2 <- right_join(B.flux_CI, BCI, by= c("Site", "Block", "Treatment", "turf
 CI_BCI_2%>%
   filter(Cflux == "GPP")%>%
   filter(Treatment %in% c("FB" , "GB", "G", "B", "F" ))%>%
-  ggplot(aes(B_CI, CI, color = Treatment ))+
+  ggplot(aes( BCI, CI, color = Treatment ))+
   geom_point()+
   geom_abline(intercept = 0, slope = 1)+
   geom_hline(yintercept= 0 , linetype="dashed", color = "grey")+
@@ -702,7 +722,25 @@ CI_BCI_2%>%
   #xlim(0,1)+
   #ylim(0,2.5)+
   facet_grid(T_level.x~P_level.x)+
-  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_blank(), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
+  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_text(size = 14), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
+
+
+
+
+### Collaps traitspectrum into PCA > calculate new CWM trait for plots > does this explain CI
+load("O:\\FunCab\\Data\\FunCaB2\\CO2\\pcaScores.RData")
+
+
+##### Do changes in traitspace between removals explain CI
+load("O:\\FunCab\\Data\\FunCaB2\\CO2\\community_FD_Anom.RData") # load anomalie data from trait 
+community_FD%>%
+  ungroup()
+
+ 
+#use significant anomalies as predictors for CI
+# maybe also include anomalies of biomass change in model.
+# lasso model > check R blog
+
 
 
 ####-----------------------------------------------------------------------------------------------------------------
