@@ -11,7 +11,7 @@ library("broom")
 
 #### Load and process community data
 ## community cover 2015-2016 with TTC
-load("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\funcabComp2.RData") 
+load("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\funcabComp2.RData") 
 ## correct height data of specific plots
 composition <- within(composition, vegetationHeight[turfID == 'Ram4F'& Year == "2015"] <- 80)
 subVals <- !is.na(composition$vegetationHeight) <= 10
@@ -77,40 +77,37 @@ community_cover_1516<-community_cover_1516%>%
 # compile CWM an Fdiv trait values
 # load imputation files for each traits for all species
 
-trait_C <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_C.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_C <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_C.csv", header =TRUE, sep = ";", dec = ",")%>%
   mutate(Species = paste0(Site, "_", Species))%>%
   select( Site, Species, predictValue, predictionSE) #, predictionSE
-trait_N <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_N.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_N <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_N.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
-trait_CN <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_CN.ratio.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_CN <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_CN_ratio.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
-trait_SLA <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_SLA.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_SLA <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_SLA.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
-trait_Lth <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_Lth_ave.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_Lth <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_Lth_ave.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
-trait_LDMC <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_LDMC.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_LDMC <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_LDMC.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
-trait_logLA <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_logLA.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_logLA <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_logLA.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
-trait_logHeight <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\speciesSitePredictions_logHeight.csv", header =TRUE, sep = ";", dec = ",")%>%
+trait_logHeight <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\speciesSitePredictions_logHeight.csv", header =TRUE, sep = ";", dec = ",")%>%
   select(predictValue, predictionSE)
 
 Species_traits <-bind_cols(trait_C, trait_N, trait_CN, trait_SLA, trait_Lth, trait_LDMC, trait_logLA, trait_logHeight)%>%
-  rename(C = predictValue, N = predictValue1, CN = predictValue2, SLA = predictValue3, Lth = predictValue4, LDMC = predictValue5, LA = predictValue6, Height = predictValue7)
+  rename(C = predictValue, N = predictValue1, CN = predictValue2, SLA = predictValue3, Lth = predictValue4, LDMC = predictValue5, LA = predictValue6, Height = predictValue7)%>%
+  group_by(Site, Species)%>%
+  mutate_all(funs(ifelse(.==0, NA, .))) %>%
+  select(Site, Species, C, N, CN, SLA, Lth, LDMC, LA, Height)
+# Bot_lun, Gym_dry, Hup_sel, Sel_sel. Equ_arv are ferns, no traitdata, recode to NA instead of 0
 
 ## check distribution of imputation values of traits
-ggplot(Species_traits, aes(LA))+
+ggplot(Species_traits, aes(LDMC))+
 geom_density()+
 facet_wrap(~Site)
 ## Distribution of imputed values within range of measured traits
 
-## Checked SE values for each trait- Emp_nig, Emp_her, Ver_alp and Sil_vul very large SE remove from dataset
-Species_traits<- Species_traits%>%
-  #filter(!grepl("Emp_",  Species))%>%
-  #filter(!grepl("Ver_alp",  Species))%>%
-  #filter(!grepl("Sil_vul",  Species))%>%
-  select(Site, Species, C, N, CN, SLA, Lth, LDMC, LA, Height)
-  
 
 # calculation of CWM and FDvar; Community weighted mean and community weighted variance of trait values
 # join imputed traits with species cover
@@ -149,23 +146,19 @@ community_FD <- left_join(community_cover_1516, Species_traits, by= c("Site", "S
   #gather(key= Trait, value= value, -c(turfID:Year))%>%
   ungroup()
 
-
-
-
-
 # make boxplots to explore FD_CWM and FDvar values , first unhash gather in code above
 ggplot(community_FD, aes(Site, value))+
   geom_boxplot()+
   facet_wrap(~Trait, scales = "free")
 
 ##### Biomass data #####
-biomass_others <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\biomass_2016_others_complete.csv", header=TRUE, sep=";", dec=",", stringsAsFactors = FALSE)
+biomass_others <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\biomass_2016_others_complete.csv", header=TRUE, sep=";", dec=",", stringsAsFactors = FALSE)
 
 biomass_others <- biomass_others%>%
   select(siteID, plotID, functional.group, dry.weight)%>%
   mutate(dry.weight = dry.weight/0.0625) # recalculate to g/m2
 
-biomass_forbs <- read.csv("O:\\FunCab\\Data\\FunCaB\\TraitCO2\\biomass_2016_forbs_complete.csv", header=TRUE, sep=";", dec=",", stringsAsFactors = FALSE)
+biomass_forbs <- read.csv("O:\\FunCab\\Data\\FunCaB2\\TraitCO2\\biomass_2016_forbs_complete.csv", header=TRUE, sep=";", dec=",", stringsAsFactors = FALSE)
 
 biomass_forbs <- biomass_forbs%>%
   select(siteID, plotID, functional.group, dry.weight)%>%
@@ -221,8 +214,8 @@ community_1516$Year <- as.character(community_1516$Year)
 
 ######### Add Year Specific Climate data of sites to community data #######################################################################
 # Load Gridded climate data 
-load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedDailyClimateData2009-2016.RData")
-load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedMonth_AnnualClimate2009-2016.Rdata")
+load("O:/FunCab/Data/FunCaB2/Climate/Data/GriddedDailyClimateData2009-2016.RData")
+load("O:/FunCab/Data/FunCaB2/Climate/Data/GriddedMonth_AnnualClimate2009-2016.Rdata")
 
 #description Climate data
 #Mean daily temperature (°C, Temperature)
@@ -230,11 +223,6 @@ load("O:/FunCab/Data/FunCaB/Climate/Data/GriddedMonth_AnnualClimate2009-2016.Rda
 #Mean wind (meter / second, Wind)
 #Mean cloud cover (in 8 parts, no dimension, CloudCover)
 #Precipitation (mm, Precipitation)
-
-# load packages
-library(ggplot2)
-library(dplyr)
-library(tidyr)
 
 #create new column for year and month in monthlyClimate
 monthlyClimate$Year<- format(monthlyClimate$dateMonth,format= "%Y") 
@@ -279,7 +267,7 @@ wcommunity_traits <- left_join(wcommunity_traits, biomass, by= c("turfID" = "tur
 
 #### Carbon flux data ######
 #### Reading in data and making dataframes ####
-CO2_flux <- read.csv("O:\\FunCab\\Data\\FunCaB\\CO2\\CO2_GPP_1516Trait04122017.csv", header=TRUE, sep=",")
+CO2_flux <- read.csv("O:\\FunCab\\Data\\FunCaB2\\CO2\\CO2_GPP_1516Trait04122017.csv", header=TRUE, sep=",")
 CO2_flux$turfID.x[CO2_flux$turfID.x == "Ves4C"] <- "Ves5C"
 CO2_flux$turfID.x[CO2_flux$turfID.x == "Gud5C"] <- "Gud16C"# rename plot to match vegetation data
 # remove data of TTC plots outside of FunCaB (2016data for RTC comparison) and plots that did not have species cover information
@@ -323,14 +311,13 @@ summary(lm(Gram_biomass~ 0 + gram_cover , data=CO2_mass_traits)) # P<0.001 R2=0.
 summary(lm(Forb_biomass~ 0 + forb_cover , data=CO2_mass_traits)) # P<0.001 R2= 0.83
 #summary(lm(Bryo_biomass~ 0 + bryophyteCov, data = CO2_mass_traits))
 
-
 #ggplot(CO2_mass_traits, aes(x=bryophyteCov, y= Bryo_biomass))+
 #  geom_point()+
 #  geom_smooth(method = "lm")
 
 # calculate Functional group biomass based on regression results of XC plots
 CO2_mass_traits$G_c.biomass<- 0+2.88*(CO2_mass_traits$gram_cover)
-CO2_mass_traits$F_c.biomass<- 0+1.83*(CO2_mass_traits$forb_cover)
+CO2_mass_traits$F_c.biomass<- 0+1.80*(CO2_mass_traits$forb_cover)
 CO2_mass_traits$Total_c.biomass<- CO2_mass_traits$G_c.biomass+CO2_mass_traits$F_c.biomass
 
 

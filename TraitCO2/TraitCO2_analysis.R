@@ -25,10 +25,6 @@ apply(CO2_mass_traits_median, 2, function(x) length(which(!is.na(x))))
 cols <- c("VegetationHeight", "gram_cover", "forb_cover", "Wmean_N", "Wmean_C", "Wmean_CN", "Wmean_LDMC", "Wmean_Lth", "Wmean_LA", "Wmean_Height", "Wmean_SLA")
 hist(CO2_mass_traits_median[cols])
 
-#cols2 <- c("Wmean_CN",  "Wmean_Lth", "Wmean_SLA")
-#hist(log(CO2_mass_traits_median[cols2]))
-#CO2_mass_traits_median[cols2]<- log(CO2_mass_traits_median[cols2])
-
 #hist(CO2_mass_traits_median$GPP1200)
 #hist(CO2_mass_traits_median$Reco15)
 
@@ -41,13 +37,6 @@ com_traits <- CO2_mass_traits_median %>%
 #### Checking for correlations ###
 GGally::ggpairs(com_traits)
 
-
-#CO2_site_means <- CO2_mass_traits_median%>%
-  #group_by(Site, Year, P_level, T_level) %>%
-  #summarise_all(mean, na.rm=TRUE)
-
-#hist(CO2_site_means$GPP1200)
-#hist(CO2_site_means$Reco15)
 
 #### Climate Effect on Vegetation Structure and Traits variables
 # Biomass
