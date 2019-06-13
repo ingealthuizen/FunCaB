@@ -3,7 +3,6 @@ source("O:\\FunCab\\Data\\FunCaB\\Other\\R_functions\\HighstatLibV10.R")
 library(lme4)
 library(lmerTest)
 library(ade4)
-library(MuMIn)
 library(stringr)
 library(nlme)
 library(r2glmm)
@@ -16,7 +15,8 @@ CO2_mass_traits_median <- CO2_mass_traits%>%
   dplyr::rename(Site =site)%>%
   dplyr::group_by(turfID, Site, year, P_level, T_level, treatment) %>%
   dplyr::summarise_all(median, na.rm=TRUE)%>%
-  dplyr::rename(Year = year)
+  dplyr::rename(Year = year)%>%
+  ungroup()
 
 apply(CO2_mass_traits_median, 2, function(x) length(which(!is.na(x))))
 
@@ -59,7 +59,7 @@ summary(lmer(Wmean_N ~ scale(P.mm) + (1|Year/Site), CO2_mass_traits_median)) # n
 
 #Traits Fvar
 summary(lmer(Wvar_LDMC ~ Temp.C+ scale(P.mm) +  (1|Year/Site), CO2_mass_traits_median)) # sign P.mm and interaction
-summary(lmer(Wvar_Lth ~ Temp.C+   (1|Year/Site), CO2_mass_traits_median)) 
+summary(lmer(Wvar_Lth ~ Temp.C +   (1|Year/Site), CO2_mass_traits_median)) 
 summary(lmer(Wvar_LA ~   Temp.C:scale(P.mm) + (1|Year/Site), CO2_mass_traits_median)) #sign Temp.C
 summary(lmer(Wvar_SLA ~ Temp.C+ (1|Year/Site), CO2_mass_traits_median)) # all sign
 summary(lmer(Wvar_Height ~ Temp.C+ (1|Year/Site), CO2_mass_traits_median)) # T sign
@@ -72,22 +72,28 @@ summary(lmer(Wvar_N ~ Temp.C+ scale(P.mm) + (1|Year/Site), CO2_mass_traits_media
 ######## Variance decomposition ###########################################################################################################
 library(MASS)
 library(lmerTest)
-library(MuMIn)
 library(car)
-# Between site variance 
-lm_A<- lm(GPP700 ~ 1 , data=CO2_mass_traits_median)
-summary(lm_A)
+
+# Between site variance
+# Climate model
+lm_A<- lm(GPP700 ~ Temp.C, data=CO2_mass_traits_median)
+summary(lm_A) #adj R2 0.1352
 AIC(lm_A)
+step(lm_A)
 
-
+#Veg structure model
 lm_B<- lm(GPP700 ~ forb_cover + VegetationHeight , data=CO2_mass_traits_median)
-summary(lm_B)
-vif(lm_B)
-AIC(lm_B)
- + Wmean_Lth + Wmean_SLA + Wvar_LA + Wvar_LDMC +Wvar_C
-lm_C<- (lm(GPP700 ~ Wmean_Height + Wmean_Lth + Wmean_N + Wmean_SLA + Wvar_LA + Wvar_LDMC +Wvar_C, data=CO2_mass_traits_median))
-#summary(lm_C)
-stepAIC(lm_C)
+summary(lm_B) # adj R2 0.1947
+step(lm_B)
+
+#Traits
+# Wmean_Height + Wmean_Lth + Wmean_N + Wmean_CN + Wmean_SLA + Wmean_LDMC + Wmean_Lth + Wvar_Height + Wvar_Lth + Wvar_CN + Wvar_SLA + Wvar_LDMC + Wvar_C+ Wvar_LA + Wvar_N
+lm_C1<- (lm(GPP700 ~ Wmean_Height + Wmean_N + Wmean_SLA + Wvar_C + Wvar_SLA , data=CO2_mass_traits_median))
+summary(lm_C1)
+lm_C2<- (lm(GPP700 ~  Wmean_Height + Wmean_Lth + Wmean_N + Wmean_SLA + Wvar_LDMC + Wvar_LA, data=CO2_mass_traits_median))
+summary(lm_C2)
+anova(lm_C1, lm_C2)
+step(lm_C2)
 
 lm_AB<- lm(GPP700 ~ Temp.C + forb_cover + VegetationHeight, data=CO2_mass_traits_median)
 summary(lm_AB)
