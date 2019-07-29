@@ -41,7 +41,7 @@ GGally::ggpairs(com_traits)
 #### Climate Effect on Vegetation Structure and Traits variables
 # Biomass
 summary(lmer(forb_cover~ Temp.C:scale(P.mm) + (1|Year/Site), CO2_mass_traits_median)) # sign P.mm p= 0.05
-summary(lmer(gram_cover~ Temp.C+   (1|Year/Site), CO2_mass_traits_median)) # non sign
+summary(lmer(gram_cover~ Temp.C + (1|Year/Site), CO2_mass_traits_median)) # non sign
 summary(lmer(VegetationHeight~ Temp.C+ (1|Year/Site), CO2_mass_traits_median)) # sign T p <0.001
 summary(lmer(richness~ Temp.C+  (1|Year/Site), CO2_mass_traits_median))
 summary(lmer(evenness~ Temp.C+  (1|Year/Site), CO2_mass_traits_median))
@@ -67,39 +67,26 @@ summary(lmer(Wvar_CN ~ Temp.C+ (1|Year/Site), CO2_mass_traits_median)) # non sig
 summary(lmer(Wvar_C ~ Temp.C+  (1|Year/Site), CO2_mass_traits_median)) #sign Temp.C
 summary(lmer(Wvar_N ~ Temp.C+ scale(P.mm) + (1|Year/Site), CO2_mass_traits_median)) # non sign
 
-
-
 ######## Variance decomposition ###########################################################################################################
-library(MASS)
 library(lmerTest)
 library(car)
-
-
-
-
-
+library(glmnet)
+library(tidyverse)
 
 # Between site variance
+### Model selection with regularisation ; lasso method
 # Climate model
-lm_A<- lm(GPP700 ~ Temp.C, data=CO2_mass_traits_median)
+# logtransform GPP700 > log(GPP700) to prevent model from predicting negative values
+
+lm_A<- lm(log(GPP700) ~ Temp.C, data=CO2_mass_traits_median)
 summary(lm_A) #adj R2 0.1352
-AIC(lm_A)
-step(lm_A)
 
 #Veg structure model
-lm_B<- lm(GPP700 ~ forb_cover + VegetationHeight , data=CO2_mass_traits_median)
-summary(lm_B) # adj R2 0.1947
-step(lm_B)
+CO2_traits_GPPmodelB<-CO2_mass_traits_median%>%
+  select(log(GPP700), VegetationHeight, gram_cover, forb_cover, evenness, richness, diversity)
 
-#Traits
-### Model selection with regularisation ; lasso method
-library(glmnet)
-
-CO2_traits_GPPmodelC<-CO2_mass_traits_median%>%
-  select(GPP700, Wmean_Height , Wmean_Lth , Wmean_N , Wmean_CN , Wmean_C, Wmean_SLA , Wmean_LDMC , Wmean_Lth , Wvar_Height , Wvar_Lth , Wvar_CN , Wvar_SLA , Wvar_LDMC , Wvar_C, Wvar_LA , Wvar_N)
-
-x=model.matrix(GPP700~.-1,data=CO2_traits_GPPmodelC) 
-y=CO2_traits_GPPmodelC$GPP700
+x=model.matrix(log(GPP700)~.-1,data=CO2_traits_GPPmodelB) 
+y=CO2_traits_GPPmodelB$GPP700
 fit.lasso=glmnet(x,y,alpha=1)
 plot(fit.lasso,xvar="lambda",label=TRUE)
 plot(fit.lasso,xvar="dev",label=TRUE)
@@ -107,14 +94,35 @@ cv.lasso=cv.glmnet(x,y)
 plot(cv.lasso)
 coef(cv.lasso)
 
+lm_B <- lm(GPP700 ~ VegetationHeight, data=CO2_mass_traits_median)
+summary(lm_B)
+
+#Traits
+CO2_traits_GPPmodelC<-CO2_mass_traits_median%>%
+  select(GPP700, Wmean_Height , Wmean_Lth , Wmean_N , Wmean_C, Wmean_CN , Wmean_SLA , Wmean_LDMC , Wmean_Lth , Wvar_Height , Wvar_Lth , Wvar_CN , Wvar_SLA , Wvar_LDMC , Wvar_C, Wvar_LA , Wvar_N)
+
+x=model.matrix(log(GPP700)~.-1,data=CO2_traits_GPPmodelC) 
+y=CO2_traits_GPPmodelC$GPP700
+fit.lasso=glmnet(x,y,alpha=1)
+plot(fit.lasso,xvar="lambda",label=TRUE)
+plot(fit.lasso,xvar="dev",label=TRUE)
+cv.lasso=cv.glmnet(x,y)
+plot(cv.lasso)
+coef(cv.lasso, s= "lambda.1se")
+
+
+hist(CO2_mass_traits_median$GPP700)
+
+
+
 #regularisation model
-GPP_C1<- (lm(GPP700 ~  Wmean_Height +  Wmean_N + Wmean_SLA + Wvar_SLA + Wvar_C, data=CO2_mass_traits_median))
+GPP_C1<- (lm(GPP700 ~ Wmean_Height + Wmean_N + Wmean_SLA + Wvar_SLA + Wvar_C + Wvar_LA, data=CO2_mass_traits_median))
 summary(GPP_C1)
-GPP_C2<- (lm(GPP700 ~  Wmean_Height + Wmean_Lth + Wmean_N + Wmean_SLA + Wvar_LDMC + Wvar_LA, data=CO2_mass_traits_median))
+GPP_C2<- (lm(GPP700 ~ Wmean_Height + Wmean_Lth + Wmean_N + Wmean_SLA + Wvar_LDMC + Wvar_LA, data=CO2_mass_traits_median))
 summary(GPP_C2)
 
 anova(GPP_C1, GPP_C2)
-step(GPP_C2)
+
 
 lm_AB<- lm(GPP700 ~ Temp.C + forb_cover + VegetationHeight, data=CO2_mass_traits_median)
 summary(lm_AB)
@@ -128,8 +136,6 @@ summary(lm_BC)
 
 lm_ABC <- lm(GPP700 ~ Temp.C + forb_cover + VegetationHeight + Wmean_Height + Wmean_N + Wmean_SLA + Wmean_Lth + Wvar_C + Wvar_LDMC + Wvar_LA, data=CO2_mass_traits_median)
 summary(lm_ABC)
-
-
 
 
 #Within site
@@ -172,7 +178,19 @@ summary(lm_A)
 # R2a 0.1784
 
 # Veg structure model 
-lm_B <- lm(Reco15 ~ VegetationHeight , data=CO2_mass_traits_median)
+CO2_traits_RecomodelB<-CO2_mass_traits_median%>%
+  select(Reco15, VegetationHeight, gram_cover, forb_cover, evenness, richness, diversity)
+
+x=model.matrix(Reco15~.-1,data=CO2_traits_RecomodelB) 
+y=CO2_traits_RecomodelB$Reco15
+fit.lasso=glmnet(x,y,alpha=1)
+plot(fit.lasso,xvar="lambda",label=TRUE)
+plot(fit.lasso,xvar="dev",label=TRUE)
+cv.lasso=cv.glmnet(x,y)
+plot(cv.lasso)
+coef(cv.lasso)
+
+lm_B <- lm(Reco15 ~ VegetationHeight, data=CO2_mass_traits_median)
 summary(lm_B)
 # R2a 0.1784
 
@@ -187,7 +205,7 @@ plot(fit.lasso,xvar="lambda",label=TRUE)
 plot(fit.lasso,xvar="dev",label=TRUE)
 cv.lasso=cv.glmnet(x,y)
 plot(cv.lasso)
-coef(cv.lasso)
+coef(cv.lasso, s= "lambda.1se")
 
 Reco_C1<- lm(Reco15 ~ Wmean_Height + Wmean_SLA + Wvar_C , data=CO2_mass_traits_median)
 summary(Reco_C1)
