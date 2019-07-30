@@ -216,9 +216,7 @@ veg_comp<- veg_comp%>%
          F.Height = ifelse(Treatment == "B" | Treatment == "G"| Treatment == "GB", vegetationHeight,0))%>%
   mutate(B.biomass = 0 + 1.3231*bryophyteCov + 3.1864*mossHeight,
          G.biomass = 0 + 1.04437*graminoidCov + 0.55246*G.Height,
-         F.biomass = 0 + 1.37491*forbCov + 0.22363*F.Height)%>%
-  mutate(B.biomass = ifelse(Treatment == "G" | Treatment == "F"| Treatment == "GF", B.biomass,0))
-
+         F.biomass = 0 + 1.37491*forbCov + 0.22363*F.Height)
 
 ##################### CO2 flux processing ##########################################################################
 
@@ -457,6 +455,15 @@ ggplot(CO2veg_2017, aes(x = Reco, fill = factor(P_level))) +
 # 2. change in per unit function of remaining PFG
 # 3. differences in per-unit functioning between removed and remaining PFG (difference in fluxrate)
 
+
+CO2veg_2017controls<- CO2veg_2017%>%
+  filter(Treatment == "C")%>%
+  filter(graminoidCov > 0 , forbCov > 0, bryophyteCov > 0 )
+  
+CO2veg_2017<- CO2veg_2017%>%
+  filter(Treatment != "C")%>%
+  bind_rows(CO2veg_2017controls)
+
 B.specificF <- CO2veg_2017%>%
   gather(key= Cflux , value = flux, NEE, Reco, GPP)%>%
   group_by(Site, Block, Cflux)%>%
@@ -497,8 +504,8 @@ B.flux_CI <- left_join(B.OD_calc, B.ED_calc, by = c("Site", "Block", "Treatment"
   mutate(presentFG = recode(Treatment, FGB = "zero", GF = "b", FB= "g", GB = "f", B= "gf", G = "fb", F = "gb", C = "all"))%>%
   group_by(Site, Block, turfID, Cflux)%>%
   mutate(CI = (ED-OD)/ED)%>%
-  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
-  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))
+  mutate(T_level = recode(Site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal")) %>%
+  mutate(P_level = recode(Site, Ulv = "600mm", Alr = "600mm", Fau = "600mm", Lav = "1200mm", Hog = "1200mm", Vik = "1200mm", Gud = "2700mm", Ram = "2700mm", Arh = "2000mm", Skj = "2700mm", Ves = "2700mm", Ovs = "2700mm"))
 
 B.flux_CI%>% filter(!Cflux == "NEE")%>%
   filter(Treatment %in% c("FB" , "GB" , "GF"))%>%
@@ -640,7 +647,7 @@ summary(glm(deltaCI.C~ -1 + Treatment + Treatment:T_level, data =testReco2))
 #### Calculate difference between total biomass in treatment and control
 Biomass.compensation<- CO2veg_2017%>%
   select(Site, Block, Treatment, turfID, bryophyteCov, graminoidCov, forbCov, vegetationHeight, mossHeight, 
-         B.biomass, G.biomass, F.biomass, Total.biomass)%>% 
+         B.biomass, G.biomass, F.biomass)%>% 
   mutate(F.biomass = ifelse(grepl("F", Treatment), 0, F.biomass), #assign 0 to biomass compensation for FG removed
          G.biomass = ifelse(grepl("G", Treatment), 0, G.biomass),
          B.biomass = ifelse(grepl("B", Treatment), 0, B.biomass))%>% # make sure removed FG biomass is 0
@@ -665,7 +672,8 @@ BCI <- Biomass.compensation%>%
 
 
 Biomass.Control <- Biomass.compensation%>%
-  mutate(F = B.biomass + G.biomass,
+  mutate(Total.Cbiomass = B.biomass + G.biomass + F.biomass,
+         F = B.biomass + G.biomass,
          G = F.biomass + B.biomass,
          B = G.biomass + F.biomass,
          FB = G.biomass,
@@ -673,16 +681,20 @@ Biomass.Control <- Biomass.compensation%>%
          GB = F.biomass,
          FGB = 0)%>% # calculate biomass remaining for different combination of removals 
   gather(key = "bTreatment", value = "Remain.biomass", F:FGB)%>%
-  select(Site, Block, Treatment, bTreatment, B.biomass,  G.biomass, F.biomass , Remain.biomass)%>%
+  select(Site, Block, Treatment, bTreatment, B.biomass,  G.biomass, F.biomass , Remain.biomass, Total.Cbiomass)%>%
   filter(Treatment == "C")
+  
   
 BCI <- right_join(Biomass.compensation, Biomass.Control, by = c("Site", "Block", "Treatment" = "bTreatment"))%>%
     # need to subtract biomass of FG that will be removed from total biomass of control
-  mutate(Total.Cbiomass = B.biomass.y + G.biomass.y+ F.biomass.y,
-        BCI = ((Total.biomass- Remain.biomass )/ (Total.Cbiomass -Remain.biomass)))%>% #based on Adler &Bradford
+ mutate(#ED = Remain.biomass *100,
+        #OD = (Total.Cbiomass - Total.biomass) / Total.Cbiomass *100,
+        #BCI = (ED-OD)/ED,
+        #BCI2 = (Total.biomass- Remain.biomass )/ (Total.Cbiomass), 
+        BCI3 = ((Total.biomass- Remain.biomass )/ (Total.Cbiomass -Remain.biomass)))%>% #based on Adler &Bradford
   filter(!Treatment %in% c("C", "FGB"))%>%
-  mutate(T_level = recode(Site, Ulv = "1", Lav = "1",  Gud = "1", Skj = "1", Alr = "2", Hog = "2", Ram = "2", Ves = "2", Fau = "3", Vik = "3", Arh = "3", Ovs = "3")) %>%
-  mutate(P_level = recode(Site, Ulv = "1", Alr = "1", Fau = "1", Lav = "2", Hog = "2", Vik = "2", Gud = "3", Ram = "3", Arh = "3", Skj = "4", Ves = "4", Ovs = "4"))%>%
+  mutate(T_level = recode(Site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal")) %>%
+  mutate(P_level = recode(Site, Ulv = "600mm", Alr = "600mm", Fau = "600mm", Lav = "1200mm", Hog = "1200mm", Vik = "1200mm", Gud = "2700mm", Ram = "2700mm", Arh = "2000mm", Skj = "2700mm", Ves = "2700mm", Ovs = "2700mm"))%>%
   mutate(Temp.C = recode(Site, Ulv = 6.17, Lav = 6.45,  Gud = 5.87, Skj = 6.58, Alr = 9.14, Hog = 9.17, Ram = 8.77, 
                          Ves = 8.67, Fau = 10.3, Vik = 10.55, Arh = 10.6, Ovs = 10.78))%>%
   mutate(P.mm = recode(Site, Ulv = 596, Alr = 789, Fau = 600, Lav = 1321, Hog = 1356, Vik = 1161, Gud = 1925, 
@@ -692,29 +704,55 @@ BCI <- right_join(Biomass.compensation, Biomass.Control, by = c("Site", "Block",
 BCI%>%
   #filter(Treatment %in% c("FB", "GB", "GF"))%>%
   #filter(Treatment %in% c("F", "B", "G"))%>%
-  ggplot(aes(T_level, BCI, fill = Treatment))+
+  ggplot(aes(P_level, BCI3, fill = Treatment))+
   geom_boxplot()+
   geom_hline(yintercept = 0, linetype = "dashed") +
-  facet_grid(~P_level)+
+  facet_wrap(~T_level)+
   theme(axis.title.x=element_text(size = 18), axis.text.x=element_text(size = 14), axis.title = element_text(size = 18), axis.text.y = element_text(size = 14), strip.text = element_text(size = 14))  
 
 # compare CI with B_CI to see if biomass compensation is the main driver of CI
 # join CI data with B_CI data
 CI_BCI_2 <- right_join(B.flux_CI, BCI, by= c("Site", "Block", "Treatment", "turfID"))
+CI_BCI_2$Treatment <- factor(CI_BCI_2$Treatment, levels = c("G", "F", "B", "FB", "GB", "GF"))
+
+library(RColorBrewer)
+CI_BCI_2$P_level.x <- factor(CI_BCI_2$P_level.x, levels = c("600mm", "1200mm", "2700mm"))
+CI_BCI_2$T_level.x <- factor(CI_BCI_2$T_level.x, levels = c("Alpine", "Sub-alpine", "Boreal"))
 
 CI_BCI_2%>%
-  filter(Cflux == "GPP")%>%
-  filter(Treatment %in% c("FB" , "GB", "G", "B", "F" ))%>%
-  ggplot(aes( BCI, CI, color = P_level.x ))+
-  geom_point()+
+  filter(Cflux == "Reco")%>%
+  filter(Treatment %in% c("FB" ,"GF", "GB", "G", "B", "F" ))%>%
+  ggplot(aes( BCI3, CI, color = Treatment, fill = Treatment, shape= T_level.x ))+
+  geom_point(size= 2.5, alpha = 0.5)+
+  scale_shape_manual(values = c(24, 22, 25))+
+  scale_color_brewer(palette = "Dark2")+
+  scale_fill_brewer(palette = "Dark2")+
   geom_abline(intercept = 0, slope = 1)+
   geom_hline(yintercept= 0 , linetype="dashed", color = "grey")+
   geom_vline(xintercept = 0, linetype= "dashed", color = "grey")+
-  facet_grid(~Cflux)+
-  #xlim(0,1)+
-  #ylim(0,2.5)+
-  facet_grid(T_level.x~Treatment)+
+  facet_grid(~Reco)+
+  facet_grid(~P_level.x)+
+  guides(shape=guide_legend(title="Temperature level"))+
+  labs(Title= "Reco", x= "Biomass Compensation Index", y = "C flux Compensation Index")+
   theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_text(size = 14), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
+
+
+ggplot( aes(presentFG, CI, fill = T_level))+
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "solid") +
+  geom_boxplot(outlier.shape = NA)+
+  geom_point(size =1.5,  alpha = 0.6, position = position_jitterdodge(jitter.width = 0.1)  ) +
+  scale_fill_manual(values =c("white", "grey70", "grey40"),
+                    name="Temperature level", 
+                    breaks=c("Alpine", "Sub-alpine", "Boreal"), 
+                    labels = c("ALP", "SUB", "BOR"),
+                    guide= FALSE)+
+  scale_x_discrete(limits=c("gb","fb", "gf"), labels = c("gb" = "GB", "fb" ="FB", "gf"= "GF"   ))+
+  theme_classic()+
+  scale_y_discrete(limits = c(-2,-1,0,1,2,3))+
+  facet_grid(~Cflux)+
+  geom_text(data = ann_textC ,aes(x= 3.4, y= -2, label =lab), size= 5, inherit.aes = FALSE)+
+  theme(axis.title.x=element_blank(), axis.text.x=element_text(size = 12), axis.title = element_text(size = 12), axis.text.y = element_text(size = 12), axis.title.y=element_text(size = 14), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"), legend.position = "none" )
 
 
 ggplot(BCI, aes(control.biomass, Total.biomass, col = Treatment))+
