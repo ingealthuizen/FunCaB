@@ -507,15 +507,6 @@ B.flux_CI <- left_join(B.OD_calc, B.ED_calc, by = c("Site", "Block", "Treatment"
   mutate(T_level = recode(Site, Ulv = "Alpine", Lav = "Alpine",  Gud = "Alpine", Skj = "Alpine", Alr = "Sub-alpine", Hog = "Sub-alpine", Ram = "Sub-alpine", Ves = "Sub-alpine", Fau = "Boreal", Vik = "Boreal", Arh = "Boreal", Ovs = "Boreal")) %>%
   mutate(P_level = recode(Site, Ulv = "600mm", Alr = "600mm", Fau = "600mm", Lav = "1200mm", Hog = "1200mm", Vik = "1200mm", Gud = "2700mm", Ram = "2700mm", Arh = "2000mm", Skj = "2700mm", Ves = "2700mm", Ovs = "2700mm"))
 
-B.flux_CI%>% filter(!Cflux == "NEE")%>%
-  filter(Treatment %in% c("FB" , "GB" , "GF"))%>%
-  ggplot( aes(presentFG, CI, fill = T_level ))+
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  geom_hline(yintercept = 0, linetype = "solid") +
-  geom_boxplot()+
-  facet_grid(~Cflux)+
-  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_blank(), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"), legend.position = "none" )
-
 save(B.flux_CI, file = "O:\\FunCab\\Data\\FunCaB2\\CO2\\CI_biomass.RData")
 
 CImean <- B.flux_CI%>%
@@ -527,8 +518,6 @@ test.CI.GPP<- B.flux_CI%>% filter(Cflux == "GPP")%>%
   filter(Treatment %in% c("FB" , "GB" , "GF"))
 aov.CI.GPP<- aov(CI~ presentFG+T_level, data=test.CI.GPP) #
 summary(aov.CI.GPP)
-
-
 
 test.CI.Reco<- B.flux_CI%>% filter(Cflux == "Reco")%>%
   filter(Treatment %in% c("FB" , "GB" , "GF"))
@@ -720,21 +709,21 @@ CI_BCI_2$P_level.x <- factor(CI_BCI_2$P_level.x, levels = c("600mm", "1200mm", "
 CI_BCI_2$T_level.x <- factor(CI_BCI_2$T_level.x, levels = c("Alpine", "Sub-alpine", "Boreal"))
 
 CI_BCI_2%>%
-  filter(Cflux == "Reco")%>%
+  filter(Cflux == "GPP")%>%
   filter(Treatment %in% c("FB" ,"GF", "GB", "G", "B", "F" ))%>%
   ggplot(aes( BCI3, CI, color = Treatment, fill = Treatment, shape= T_level.x ))+
   geom_point(size= 2.5, alpha = 0.5)+
   scale_shape_manual(values = c(24, 22, 25))+
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2", name = "FG present", labels = c("FB", "GB", "GF", "G", "F", "B"))+
+  scale_fill_brewer(palette = "Dark2", name = "FG present", labels = c("FB", "GB", "GF", "G", "F", "B"))+
   geom_abline(intercept = 0, slope = 1)+
   geom_hline(yintercept= 0 , linetype="dashed", color = "grey")+
   geom_vline(xintercept = 0, linetype= "dashed", color = "grey")+
-  facet_grid(~Reco)+
+  facet_grid(~GPP)+
   facet_grid(~P_level.x)+
   guides(shape=guide_legend(title="Temperature level"))+
-  labs(Title= "Reco", x= "Biomass Compensation Index", y = "C flux Compensation Index")+
-  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14), axis.text.y = element_text(size = 14), axis.title.y=element_text(size = 14), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
+    labs(Title= "GPP", x= "Biomass Compensation Index", y = "C flux Compensation Index")+
+  theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14),  axis.title.y=element_text(size = 14), axis.text.y = element_text(size = 12), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
 
 
 ggplot( aes(presentFG, CI, fill = T_level))+
