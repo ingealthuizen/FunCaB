@@ -709,9 +709,9 @@ CI_BCI_2$P_level.x <- factor(CI_BCI_2$P_level.x, levels = c("600mm", "1200mm", "
 CI_BCI_2$T_level.x <- factor(CI_BCI_2$T_level.x, levels = c("Alpine", "Sub-alpine", "Boreal"))
 
 CI_BCI_2%>%
-  filter(Cflux == "GPP")%>%
+  filter(Cflux == "Reco")%>%
   filter(Treatment %in% c("FB" ,"GF", "GB", "G", "B", "F" ))%>%
-  ggplot(aes( BCI3, CI, color = Treatment, fill = Treatment, shape= T_level.x ))+
+  ggplot(aes( BCI3, CI, color = Treatment, fill = Treatment, shape= P_level.x ))+
   geom_point(size= 2.5, alpha = 0.5)+
   scale_shape_manual(values = c(24, 22, 25))+
   scale_color_brewer(palette = "Dark2", name = "FG present", labels = c("FB", "GB", "GF", "G", "F", "B"))+
@@ -719,10 +719,10 @@ CI_BCI_2%>%
   geom_abline(intercept = 0, slope = 1)+
   geom_hline(yintercept= 0 , linetype="dashed", color = "grey")+
   geom_vline(xintercept = 0, linetype= "dashed", color = "grey")+
-  facet_grid(~GPP)+
-  facet_grid(~P_level.x)+
-  guides(shape=guide_legend(title="Temperature level"))+
-    labs(Title= "GPP", x= "Biomass Compensation Index", y = "C flux Compensation Index")+
+  facet_grid(~Reco)+
+  facet_grid(~T_level.x)+
+  guides(shape=guide_legend(title="Precipitation level"))+
+    labs(Title= "Reco", x= "Biomass Compensation Index", y = "C flux Compensation Index")+
   theme(axis.title.x=element_text(size = 14), axis.text.x=element_text(size = 12), axis.title = element_text(size = 14),  axis.title.y=element_text(size = 14), axis.text.y = element_text(size = 12), strip.background = element_rect(colour="black", fill="white"), panel.background = element_rect(fill= "white"), panel.border = element_rect(colour = "black", fill=NA), strip.text.x = element_text(size=12, face="bold"),  axis.line = element_line(colour = "black"))
 
 
